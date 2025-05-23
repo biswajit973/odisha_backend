@@ -50,6 +50,7 @@ class Requests(models.Model):
     
    
     user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='requests',default=0)
+    service_type = models.CharField(default="waste pickup")
     type = models.CharField(max_length=100)
     description = models.TextField()
     waste_type = models.CharField(max_length=200,null=True)
@@ -65,6 +66,8 @@ class Requests(models.Model):
     time_slot=models.CharField(max_length=100)
     payment_method=models.CharField(max_length=100)
     payment_status=models.BooleanField(default=False)
+    status= models.CharField(max_length=100,default="pending")
+    comment = models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
     
@@ -77,12 +80,12 @@ class Request_images(models.Model):
     image = models.ImageField(upload_to='request_images/')
     
     
-class StatusUpdates(models.Model):
-    request = models.ForeignKey(Requests, on_delete=models.CASCADE, related_name='statusupdates')
-    status = models.CharField(max_length=100)
-    comment = models.TextField()
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='statusupdates')
-    timestamp = models.DateTimeField(auto_now_add=True)
+# class StatusUpdates(models.Model):
+#     request = models.ForeignKey(Requests, on_delete=models.CASCADE, related_name='statusupdates')
+#     status = models.CharField(max_length=100)
+#     comment = models.TextField()
+#     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='statusupdates')
+#     timestamp = models.DateTimeField(auto_now_add=True)
     
 
 
@@ -106,6 +109,7 @@ class Kalyanmandap_images(models.Model):
 class Kalyanmandap_booking(models.Model):
     kalyanmandap = models.ForeignKey(Kalyanmandap, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
+    service_type = models.CharField(default="mandap booking")
     occasion = models.CharField(max_length=100)
     number_of_people = models.IntegerField()
     start_datetime = models.DateTimeField()
@@ -114,6 +118,39 @@ class Kalyanmandap_booking(models.Model):
     additional_requests = models.TextField()
     payment_method = models.CharField(max_length=100)
     status= models.CharField(max_length=100,default="pending")
+    comment = models.TextField(null=True,blank=True)
     
-       
+    
+ 
+class PollutionTypeMaster(models.Model):
+    name = models.CharField(max_length=100)
+    active_status = models.BooleanField(default=True)
+    created_date = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.name
+
+class PollutionSubCategory(models.Model):
+    pollution_type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE, related_name='subcategories')
+    name = models.CharField(max_length=150)
+
+    def __str__(self):
+        return f"{self.pollution_type.name} - {self.name}"
+
+class PollutionReport(models.Model):
+   
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE)
+    source = models.ForeignKey(PollutionSubCategory, on_delete=models.CASCADE, null=True, blank=True)
+    custom_source = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField()
+    location = models.CharField(max_length=255)
+    address = models.TextField()
+    status = models.CharField(max_length=50,default="pending")
+    comment = models.TextField(blank=True, null=True)
+    submitted_on = models.DateTimeField(auto_now_add=True)
+    
+class Pollution_images(models.Model):
+    pollutionreport = models.ForeignKey(PollutionReport,on_delete=models.CASCADE, related_name='pollution_images')
+    image = models.ImageField(upload_to='pollution_images/')    
+    
