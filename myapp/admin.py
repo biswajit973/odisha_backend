@@ -14,6 +14,10 @@ admin.site.register(PollutionTypeMaster)
 admin.site.register(PollutionReport)
 admin.site.register(PollutionSubCategory)
 admin.site.register(Pollution_images)
+admin.site.register(Complaint)
+admin.site.register(ComplaintCategory)
+admin.site.register(ComplaintSubCategory)
+admin.site.register(Complaint_images)
 
 
 

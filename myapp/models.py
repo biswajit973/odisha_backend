@@ -44,6 +44,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+    
+STATUS_CHOICES = [
+        ('pending', 'pending'),
+        ('approved', 'approved'),
+        ('scheduled', 'scheduled'),
+        ('rejected', 'rejected'),
+    ]    
 
 
 class Requests(models.Model):
@@ -66,7 +74,7 @@ class Requests(models.Model):
     time_slot=models.CharField(max_length=100)
     payment_method=models.CharField(max_length=100)
     payment_status=models.BooleanField(default=False)
-    status= models.CharField(max_length=100,default="pending")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
@@ -80,12 +88,7 @@ class Request_images(models.Model):
     image = models.ImageField(upload_to='request_images/')
     
     
-# class StatusUpdates(models.Model):
-#     request = models.ForeignKey(Requests, on_delete=models.CASCADE, related_name='statusupdates')
-#     status = models.CharField(max_length=100)
-#     comment = models.TextField()
-#     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='statusupdates')
-#     timestamp = models.DateTimeField(auto_now_add=True)
+
     
 
 
@@ -117,7 +120,7 @@ class Kalyanmandap_booking(models.Model):
     duration = models.CharField(max_length=100)
     additional_requests = models.TextField()
     payment_method = models.CharField(max_length=100)
-    status= models.CharField(max_length=100,default="pending")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     
     
@@ -141,12 +144,13 @@ class PollutionReport(models.Model):
    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE)
+    service_type = models.CharField(default="pollution report")
     source = models.ForeignKey(PollutionSubCategory, on_delete=models.CASCADE, null=True, blank=True)
     custom_source = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField()
     location = models.CharField(max_length=255)
     address = models.TextField()
-    status = models.CharField(max_length=50,default="pending")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(blank=True, null=True)
     submitted_on = models.DateTimeField(auto_now_add=True)
     
@@ -154,3 +158,91 @@ class Pollution_images(models.Model):
     pollutionreport = models.ForeignKey(PollutionReport,on_delete=models.CASCADE, related_name='pollution_images')
     image = models.ImageField(upload_to='pollution_images/')    
     
+
+
+
+  
+    
+    
+    
+ 
+    
+    
+class ComplaintCategory(models.Model):
+    name = models.CharField(max_length=255)
+    active_status = models.BooleanField(default=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+
+
+class ComplaintSubCategory(models.Model):
+    category = models.ForeignKey(ComplaintCategory, related_name='subcategories', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    is_paid_service = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+    
+
+class Complaint(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey(ComplaintCategory, on_delete=models.CASCADE, null=True)
+    subcategory = models.ForeignKey(ComplaintSubCategory, on_delete=models.CASCADE, null=True, blank=True)
+    custom_category = models.CharField(max_length=255, blank=True, null=True)  
+    service_type = models.CharField(default="complaints")
+    location = models.CharField(max_length=255, blank=True)
+    address = models.TextField(blank=True)
+    description = models.TextField()
+    submitted_on = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    comment = models.TextField(blank=True, null=True)
+
+
+class Complaint_images(models.Model):
+    complaint = models.ForeignKey(Complaint, related_name='complaint_images', on_delete=models.CASCADE)
+    image = models.TextField(blank=True)
+    
+    
+
+class CesspoolRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    service_type = models.CharField(default="cesspool")
+    contact_number = models.CharField(max_length=15)
+    location = models.CharField(max_length=255)  
+    address = models.TextField()
+    description = models.TextField()
+    waste_tank_type = models.CharField(max_length=100)
+    capacity = models.CharField(max_length=100,null=True,blank=True)
+    urgency_level = models.CharField(max_length=20,null=True,blank=True)
+    preferred_datetime = models.DateTimeField(blank=True, null=True) 
+    accessibility_note = models.TextField(blank=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+            
+class CesspoolRequest_images(models.Model):
+    Cesspool = models.ForeignKey(CesspoolRequest,on_delete=models.CASCADE,related_name='cesspool_images')
+    image = models.TextField(blank=True)
+    
+    
+    
+    
+    
+
+        
+        
+
+    
+
+    
+ 
+    
+
+
+    
+    
+

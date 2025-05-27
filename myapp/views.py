@@ -187,6 +187,25 @@ class AccountDetails(APIView):
         serializer = self.serializer_class(request.user)
         return Response({"userDetails":serializer.data}, status=status.HTTP_200_OK)
     
+    
+class UpdateUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        new_email = request.data.get('email')
+
+        if new_email and User.objects.filter(email=new_email).exclude(id=user.id).exists():
+            return Response({"message": "Email already in use by another account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = updateUserProfileSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Profile updated successfully"}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class CreateRequestView(APIView):
     
@@ -244,14 +263,30 @@ class UserRequestsView(APIView):
             request['request_images']=[img.image.url for img in request_images]
         return Response(data, status=status.HTTP_200_OK)
     
+class UserEachRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class   = UserRequestsSerializer
+    
+    def get(self, request,pk):
+        
+        try:
+            requests = Requests.objects.get(user=request.user,id=pk)
+        except Requests.DoesNotExist:
+            return Response({"message": "No requests found."}, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(requests) 
+        data=serializer.data
+        request_images = Request_images.objects.filter(request_id=requests.id)
+        data['request_images']=[img.image.url for img in request_images]
+        return Response(data, status=status.HTTP_200_OK)    
 
-class EachUserRequestView(APIView):
+
+class EachRequestView(APIView):
     permission_classes = [IsAdminUser]
     serializer_class   = EachRequestSerializer
     
     def get(self, request, pk):
         
-        requests = Requests.objects.filter(user_id=pk)
+        requests = Requests.objects.filter(id=pk)
         if not requests.exists():
           return Response({"message": "No requests found."}, status=status.HTTP_200_OK)
         serializer = self.serializer_class(requests,many=True)
@@ -442,9 +477,23 @@ class UserKalyanmandapBookingsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        bookings = Kalyanmandap_booking.objects.filter(user=request.user).order_by('-start_datetime')
+        try:
+         bookings = Kalyanmandap_booking.objects.filter(user=request.user).order_by('-start_datetime')
+        except Kalyanmandap_booking.DoesNotExist:
+             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
         serializer = KalyanmandapBookingSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UserEachKalyanmandapBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,pk):
+        try:
+         bookings = Kalyanmandap_booking.objects.get(user=request.user,id=pk)
+        except Kalyanmandap_booking.DoesNotExist:
+             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+        serializer = KalyanmandapBookingSerializer(bookings)
+        return Response(serializer.data, status=status.HTTP_200_OK)    
     
     
     
@@ -455,6 +504,20 @@ class AdminListAllBookingsView(APIView):
         bookings = Kalyanmandap_booking.objects.all().order_by('-start_datetime')
         serializer = AdminKalyanmandapBookingSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)    
+    
+   
+class AdminEachMandapBookingView(APIView):
+    permission_classes = [IsAdminUser]  
+
+    def get(self, request,pk):
+        try:
+            bookings = Kalyanmandap_booking.objects.get(id=pk)
+        except Kalyanmandap_booking.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+        serializer = AdminKalyanmandapBookingSerializer(bookings)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
+    
+           
     
     
 
@@ -503,13 +566,13 @@ class UserBookingsView(APIView):
         status_filter = request.query_params.get('status', 'active').lower()
         type_filter = request.query_params.get('type', 'all').lower()
 
-        active_statuses = ['pending', 'initiated', 'ongoing']
-        past_statuses = ['completed', 'rejected', 'cancelled','approved']
+        active_statuses = ['pending', 'scheduled']
+        past_statuses = ['rejected','approved']
         status_list = active_statuses if status_filter == 'active' else past_statuses
 
         results = {}
 
-        if type_filter in ['waste', 'all']:
+        if type_filter in ['waste','all']:
             waste_bookings = Requests.objects.filter(
                 user=user,
                 status__in=status_list
@@ -526,6 +589,31 @@ class UserBookingsView(APIView):
 
             mandap_data = KalyanmandapBookingSerializer(mandap_bookings, many=True)
             results['mandap_bookings'] = mandap_data.data
+        
+        if type_filter in ['pollution', 'all']:
+            pollution_reports = PollutionReport.objects.filter(
+                user=user,
+                status__in=status_list
+            )
+            pollution_data = PollutionReportSerializer(pollution_reports, many=True)
+            results['pollution_bookings'] = pollution_data.data    
+        
+        if type_filter in ['complaints', 'all']:
+            complaints_all = Complaint.objects.filter(
+                user=user,
+                status__in=status_list
+            )
+            complaints_data = ComplaintSerializer(complaints_all, many=True)
+            results['complaints_bookings'] = complaints_data.data 
+            
+        if type_filter in ['cesspool', 'all']:
+            cesspool_all = CesspoolRequest.objects.filter(
+                user=user,
+                status__in=status_list
+            )
+            cesspool_data = CesspoolRequestSerializer(cesspool_all, many=True)
+            results['cesspool_bookings'] = cesspool_data.data        
+           
 
         return Response(results, status=status.HTTP_200_OK)
     
@@ -534,6 +622,7 @@ class UserBookingsView(APIView):
 from django.shortcuts import get_object_or_404
 
 class UserEachBookingView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
         service_type = request.query_params.get('service_type')
@@ -558,6 +647,14 @@ class UserEachBookingView(APIView):
                 service_type=service_type
             )
             serializer = KalyanmandapBookingSerializer(booking)
+            
+        elif service_type == "pollution report":
+            booking = get_object_or_404(PollutionReport, id=booking_id, service_type=service_type)
+            serializer = PollutionReportSerializer(booking)    
+        
+        elif service_type == "cesspool request":
+            booking = get_object_or_404(CesspoolRequest, id=booking_id, service_type=service_type)
+            serializer = CesspoolRequestSerializer(booking)        
 
         else:
             return Response(
@@ -574,6 +671,7 @@ class UserEachBookingView(APIView):
 
 
 class PollutionCategoryView(APIView):
+    permission_classes = [IsAuthenticated] 
     def get(self, request):
         categories = PollutionTypeMaster.objects.filter(active_status=True)
         serializer = PollutionTypeSerializer(categories, many=True)
@@ -606,7 +704,12 @@ class UserReportsView(APIView):
          try:
             reports = PollutionReport.objects.filter(user=request.user)
             serializer = PollutionReportSerializer(reports, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+            for pollutionreport in data:
+                pollution_images = Pollution_images.objects.filter(pollutionreport_id=pollutionreport['id'])
+                pollutionreport['pollution_images']=[img.image.url for img in pollution_images]
+            return Response(data, status=status.HTTP_200_OK)
+        
          except PollutionReport.DoesNotExist:
             return Response({"message": "No records found"}, status=status.HTTP_200_OK)
 
@@ -617,19 +720,27 @@ class UserEachReportView(APIView):
          try:
             report= PollutionReport.objects.get(user=request.user,id=pk)
             serializer = PollutionReportSerializer(report)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+            pollution_images = Pollution_images.objects.filter(pollutionreport_id=report.id)
+            data['pollution_images']=[img.image.url for img in pollution_images]
+            return Response(data, status=status.HTTP_200_OK)
          except PollutionReport.DoesNotExist:
             return Response({"message": "No record found"}, status=status.HTTP_200_OK)        
 
 
 
 class AdminReportView(APIView):
+    permission_classes = [IsAdminUser]
     def get(self, request):
-        # You can add admin-only permission if needed
+        
         try:
             reports = PollutionReport.objects.all()
             serializer = PollutionReportSerializer(reports,many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+            for pollutionreport in data:
+                pollution_images = Pollution_images.objects.filter(pollutionreport_id=pollutionreport['id'])
+                pollutionreport['pollution_images']=[img.image.url for img in pollution_images]
+            return Response(data, status=status.HTTP_200_OK)
         except PollutionReport.DoesNotExist:
             return Response({"message": "No records found"}, status=status.HTTP_200_OK)
 
@@ -637,15 +748,20 @@ class AdminReportView(APIView):
     
     
 class AdminEachReportView(APIView):
+    permission_classes = [IsAdminUser]
     def get(self, request, pk):
        try:
             report = PollutionReport.objects.get(id=pk)
             serializer = PollutionReportSerializer(report)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+            pollution_images = Pollution_images.objects.filter(pollutionreport_id=report.id)
+            data['pollution_images']=[img.image.url for img in pollution_images]
+            return Response(data, status=status.HTTP_200_OK)
        except PollutionReport.DoesNotExist:
             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
 
 class AdminUpdateReportStatusView(APIView):
+    permission_classes = [IsAdminUser] 
     def put(self, request, pk):
         report = get_object_or_404(PollutionReport, pk=pk)
         serializer = PollutionReportStatusUpdateSerializer(report, data=request.data, partial=True)
@@ -656,3 +772,242 @@ class AdminUpdateReportStatusView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    
+
+
+class ComplaintCategoryView(APIView):
+    def get(self, request):
+        categories = ComplaintCategory.objects.filter(active_status=True)
+        serializer = ComplaintCategorySerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateComplaintView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        images_data = data.pop("complaint_images", [])
+        serializer = ComplaintSerializer(data=request.data)
+        if not images_data:
+            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if serializer.is_valid():
+            Complaint_instance = serializer.save(user=request.user)
+            for img_str in images_data:
+                Complaint_images.objects.create(
+                    complaint = Complaint_instance,
+                    image = img_str
+                )  
+            return Response({"message": "Complaint submitted successfully"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+ 
+class UserComplaintsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+         try:
+            reports = Complaint.objects.filter(user=request.user)
+            serializer = ComplaintSerializer(reports, many=True)
+            data = serializer.data
+            for complaint in data:
+                complaint_images = Complaint_images.objects.filter(complaint_id=complaint['id'])
+                complaint['complaint_images']=[img.image for img in complaint_images]
+            return Response(data, status=status.HTTP_200_OK)
+         except Complaint.DoesNotExist:
+            return Response({"message": "No records found"}, status=status.HTTP_200_OK)
+
+class UserEachComplaintView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,pk):
+         try:
+            report= Complaint.objects.get(user=request.user,id=pk)
+            serializer = ComplaintSerializer(report)
+            data = serializer.data
+            complaint_images = Complaint_images.objects.filter(complaint_id=report.id)
+            data['complaint_images']=[img.image for img in complaint_images]
+            return Response(data, status=status.HTTP_200_OK)
+            
+         except Complaint.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)        
+
+
+
+class AdminComplaintView(APIView):
+    permission_classes = [IsAdminUser]
+    def get(self, request):
+        try:
+            reports = Complaint.objects.all()
+            serializer = ComplaintSerializer(reports,many=True)
+            data = serializer.data
+            for complaint in data:
+                complaint_images = Complaint_images.objects.filter(complaint_id=complaint['id'])
+                complaint['complaint_images']=[img.image for img in complaint_images]
+            return Response(data, status=status.HTTP_200_OK)
+        except Complaint.DoesNotExist:
+            return Response({"message": "No records found"}, status=status.HTTP_200_OK)
+
+        
+    
+    
+class AdminEachComplaintReportView(APIView):
+    permission_classes = [IsAdminUser]
+    def get(self, request, pk):
+       try:
+            report = Complaint.objects.get(id=pk)
+            serializer = ComplaintSerializer(report)
+            data = serializer.data
+            complaint_images = Complaint_images.objects.filter(complaint_id=report.id)
+            data['complaint_images']=[img.image for img in complaint_images]
+            return Response(data, status=status.HTTP_200_OK)
+       except Complaint.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+
+class AdminUpdateComplaintReportStatusView(APIView):
+    permission_classes = [IsAdminUser]
+    def put(self, request, pk):
+        report = get_object_or_404(Complaint, pk=pk)
+        serializer = ComplaintReportStatusUpdateSerializer(report, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Status updated successfully."}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class CreateCesspoolRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+
+        images_data = data.pop("cesspool_images", [])
+
+        serializer = CesspoolRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            cesspool_instance = serializer.save(user=request.user)
+
+            if not images_data:
+                return Response({"message": "At least one image is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            for img_str in images_data:
+                CesspoolRequest_images.objects.create(Cesspool=cesspool_instance, image=img_str)
+
+            return Response({"message": "CessPool request raised Successfully"}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    
+    
+class UserCesspoolRequests(APIView):
+    
+    permission_classes = [IsAuthenticated]
+      
+    def get(self,request):
+        try:
+            data = CesspoolRequest.objects.filter(user=request.user)
+            serializer = CesspoolRequestSerializer(data,many=True)
+            data = serializer.data
+            for cesspoolrequest in data:
+                cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspoolrequest['id'])
+                cesspoolrequest['cesspool_images']=[img.image for img in cesspool_images]
+            return Response(data, status=status.HTTP_200_OK)
+        except CesspoolRequest.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+        
+        
+class UserCesspoolEachRequest(APIView):
+    
+    permission_classes = [IsAuthenticated]
+      
+    def get(self,request,pk):
+        try:
+            cesspool_request = CesspoolRequest.objects.get(user=request.user,id=pk)
+            serializer = CesspoolRequestSerializer(cesspool_request)
+            data = serializer.data
+            cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspool_request.id)
+            data['cesspool_images']=[img.image for img in cesspool_images]
+            return Response(data, status=status.HTTP_200_OK)
+            
+        except CesspoolRequest.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+            
+
+        
+class AdminCesspoolrequestsView(APIView):
+    
+    permission_classes=[IsAdminUser]
+    
+    def get(self,request):
+        try: 
+            cesspoolrequests = CesspoolRequest.objects.all()
+            serializer = CesspoolRequestSerializer(cesspoolrequests,many=True)
+            data = serializer.data
+            for cesspoolrequest in data:
+                cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspoolrequest['id'])
+                cesspoolrequest['cesspool_images']=[img.image for img in cesspool_images]
+            return Response(data, status=status.HTTP_200_OK)
+        
+        except CesspoolRequest.DoesNotExist:
+         return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+     
+     
+class AdminEachCesspoolrequestview(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def get(self,request,pk):
+        
+        try: 
+            cesspool_request = CesspoolRequest.objects.get(id=pk)
+            serializer = CesspoolRequestSerializer(cesspool_request)
+            data = serializer.data
+            data = serializer.data
+            cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspool_request.id)
+            data['cesspool_images']=[img.image for img in cesspool_images]
+            return Response(data, status=status.HTTP_200_OK)
+
+        except CesspoolRequest.DoesNotExist:
+            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+        
+        
+class AdminUpdateCesspoolRequestStatus(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def put(self,request,pk):
+        
+        cesspoolrequest = get_object_or_404(CesspoolRequest, pk=pk)
+        serializer = CessPoolStatusUpdateSerializer(cesspoolrequest, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Status updated successfully."}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+              
+
+                
+     
+        
+           
+            
+    
+    
+    
+                    
+            
+        
+        
+        
+     
+       
+    
+    
+        

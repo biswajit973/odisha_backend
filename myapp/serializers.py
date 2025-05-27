@@ -75,7 +75,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'dob', 'address', 'pincode']
-    
+        
+class updateUserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'dob', 'address', 'pincode']
+            
         
 class Kalyanmandap_imagesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -195,7 +200,7 @@ class PollutionReportSerializer(serializers.ModelSerializer):
     source_name = serializers.SerializerMethodField()
     class Meta:
         model = PollutionReport
-        fields = ['id','user_name','type', 'source', 'type_name','source_name','custom_source', 'description', 'location','address', 'status', 'comment','pollution_images']
+        fields = ['id','user_name','type', 'source', 'type_name','source_name','custom_source', 'service_type', 'location','address', 'status', 'comment','pollution_images']
     def get_user_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
     def get_type_name(self, obj):
@@ -208,3 +213,74 @@ class PollutionReportStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PollutionReport
         fields = ['status','comment']    
+
+
+
+
+
+
+class ComplaintSubCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ComplaintSubCategory
+        fields = ['id', 'name']
+
+class ComplaintCategorySerializer(serializers.ModelSerializer):
+    subcategories = ComplaintSubCategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model =  ComplaintCategory
+        fields = ['id', 'name', 'subcategories']
+        
+        
+class Complaint_imagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complaint_images
+        fields = ['image']        
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(required=False, allow_blank=True)
+    complaint_images = Complaint_imagesSerializer(many=True, read_only=True)
+    custom_subcategory =  serializers.CharField(required=False, allow_blank=True)
+    user_name = serializers.SerializerMethodField()
+
+    category_name = serializers.SerializerMethodField()
+    subcategory_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Complaint
+        fields = ['id','category','user_name', 'service_type','subcategory', 'category_name','subcategory_name','custom_subcategory', 'location','address', 'status', 'comment','complaint_images']
+    def get_user_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip()
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category else None
+    def get_subcategory_name(self, obj):
+        return obj.subcategory.name if obj.subcategory else None
+
+
+class ComplaintReportStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complaint
+        fields = ['status','comment']            
+        
+class CesspoolRequest_imagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CesspoolRequest_images
+        fields =['image']
+
+class CesspoolRequestSerializer(serializers.ModelSerializer):
+    
+    cesspool_images = CesspoolRequest_imagesSerializer(many=True,read_only=True)
+    comment = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model =  CesspoolRequest
+        fields = ['id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','cesspool_images']
+
+
+
+class CessPoolStatusUpdateSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model =  CesspoolRequest
+        fields = ["status","comment"]
+            
