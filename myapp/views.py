@@ -1,3 +1,4 @@
+import random
 from django.shortcuts import render
 
 from .serializers import *
@@ -12,10 +13,83 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAdminUser
-
+from datetime import timedelta
+from django.utils import timezone
+from allauth.socialaccount.models import SocialAccount
+import pyotp
 
 from django.contrib.auth import get_user_model
 
+
+User = get_user_model()
+
+
+class SendOTPView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            secret_key = pyotp.random_base32()
+            totp = pyotp.TOTP(secret_key, interval=300)
+            otp_value = totp.now()
+            print(otp_value)
+        
+
+            send_mail(
+                subject='Email Verification Code from Joda Municipality',
+                message=(
+                    f'Dear User,\n\n'
+                    f'To verify your email address, please use the following One-Time Password (OTP):\n\n'
+                    f'{otp_value}\n\n'
+                    f'This code is valid for 5 minutes.\n\n'
+                    f'If you did not request this verification, please ignore this email.\n\n'
+                    f'Thank you,\n'
+                    
+                ),
+                from_email='jodamunicipality@gmail.com',
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response({'message': 'OTP sent to email', "secret_key":secret_key}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP email', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class resendOTPview(APIView):
+    permission_classes = []
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            secret_key = request.data.get('secret_key')
+            totp = pyotp.TOTP(secret_key, interval=300)
+            otp_value = totp.now()
+            print(otp_value)
+        
+
+            send_mail(
+                subject='Email Verification Code from Joda Municipality',
+                message=(
+                    f'Dear User,\n\n'
+                    f'To verify your email address, please use the following One-Time Password (OTP):\n\n'
+                    f'{otp_value}\n\n'
+                    f'This code is valid for 5 minutes.\n\n'
+                    f'If you did not request this verification, please ignore this email.\n\n'
+                    f'Thank you,\n'
+                    
+                ),
+                from_email='jodamunicipality@gmail.com',
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response({'message': 'OTP resent to email'}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP email', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+            
 
 # Create your views here.
 class RegisterView(APIView):
@@ -24,9 +98,42 @@ class RegisterView(APIView):
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
+        firstname = request.data.get('first_name')
+        lastname = request.data.get('last_name')
+        full_name = f"{firstname} {lastname}".strip()
+
+        email = request.data.get('email')
+        secret_key = request.data.get('secret_key')
+        otp_value = request.data.get('otpValue')
+        print(otp_value)
+        
+        veri_otp =pyotp.TOTP(secret_key,interval=300)
+        print(secret_key)
+        print(veri_otp)
+
+
         if serializer.is_valid():
-            serializer.save()
-            return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+            
+            if veri_otp.verify(otp_value,valid_window=1):
+                 serializer.save()
+                 send_mail(
+                    subject='Registration Successful – Welcome to Joda Municipality',
+                    message=(
+                        f'Dear { full_name or "User"},\n\n'
+                        f'Congratulations! Your registration with Joda Municipality has been completed successfully.\n\n'
+                        f'You can now log in using your registered email and password.\n\n'
+                        f'If you have any questions or need support, feel free to reply to this email.\n\n'
+                        f'Thank you,\n'
+                        f'Joda Municipality Team'
+                    ),
+                    from_email='jodamunicipality@gmail.com',
+                    recipient_list=[email],
+                    fail_silently=False,
+                 )
+                 return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+            else :
+                return Response({'message': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
@@ -567,7 +674,7 @@ class UserBookingsView(APIView):
         type_filter = request.query_params.get('type', 'all').lower()
 
         active_statuses = ['pending', 'scheduled']
-        past_statuses = ['rejected','approved']
+        past_statuses = ['rejected','approved','completed']
         status_list = active_statuses if status_filter == 'active' else past_statuses
 
         results = {}
@@ -989,7 +1096,57 @@ class AdminUpdateCesspoolRequestStatus(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
+class BannersView(APIView):
+    permission_classes=[IsAuthenticated]
+    def get(self,request):
+        try:
+          banners = PromotionalBanners.objects.all()
+          serializer = BannerSerializer(banners,many=True)
+          return Response(serializer.data,status=status.HTTP_200_OK)  
+
+        except PromotionalBanners.DoesNotExist:
+          return Response({"message":"no banners found"},status=status.HTTP_200_OK)  
+      
+class CreateBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def post(self,request):
+        serializer = BannerSerializer(data=request.data)   
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"banner created successfully"},status=status.HTTP_200_OK) 
         
+
+class DeleteBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def delete(self,request,pk):
+        try:
+            banner = PromotionalBanners.objects.get(id=pk)
+            banner.delete()
+            return Response({"message":"banner deleted successfully"}, status=status.HTTP_200_OK)
+        except PromotionalBanners.DoesNotExist:
+            return Response({"message":"Banner not found"}, status=status.HTTP_404_NOT_FOUND)
+
+ 
+class UpdateBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def put(self,request,pk):
+        
+        banner = get_object_or_404(PromotionalBanners,id=pk)
+        serializer = BannerSerializer(banner,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"Banner updated successfully"},status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+                    
+        
+        
+          
+        
+
+              
         
               
 

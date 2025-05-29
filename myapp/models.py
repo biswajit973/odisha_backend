@@ -36,6 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    
 
     USERNAME_FIELD = 'email' 
     REQUIRED_FIELDS = ['first_name', 'last_name']
@@ -51,6 +52,7 @@ STATUS_CHOICES = [
         ('approved', 'approved'),
         ('scheduled', 'scheduled'),
         ('rejected', 'rejected'),
+        ('completed','completed')
     ]    
 
 
@@ -228,7 +230,11 @@ class CesspoolRequest_images(models.Model):
     Cesspool = models.ForeignKey(CesspoolRequest,on_delete=models.CASCADE,related_name='cesspool_images')
     image = models.TextField(blank=True)
     
-    
+ 
+class PromotionalBanners(models.Model):    
+    hyperlink = models.URLField(blank=True, null=True)
+    description = models.TextField(blank=True,null=True)
+    banner_image = models.ImageField(upload_to="banner_images/")
     
     
     

@@ -64,6 +64,17 @@ urlpatterns = [
     path('api/cesspool_mgmt/admin/view/', views.AdminCesspoolrequestsView.as_view(), name='admin-view-cesspoolrequest'),
     path('api/cesspool_mgmt/admin/report/<int:pk>/',views.AdminEachCesspoolrequestview.as_view(),name="admin-each-cesspool-request"),
     path('api/cesspool_mgmt/admin/update-status/<int:pk>/',views.AdminUpdateCesspoolRequestStatus.as_view(), name='cesspoolrequest-update-status'),
+    path('api/banners/',views.BannersView.as_view(), name='banners'),
+    path('api/admin/createbanner/',views.CreateBannerView.as_view(), name='create-banners'),
+    path('api/admin/deletebanner/<int:pk>/',views.DeleteBannerView.as_view(), name='delete-banner'),
+    path('api/admin/updatebanner/<int:pk>/',views.UpdateBannerView.as_view(), name='update-banner'),
+    
+
+   
+
+    path('api/auth/send-otp/', views.SendOTPView.as_view(), name='send-otp'),
+    path('api/auth/resend-otp/', views.resendOTPview.as_view(), name='resendotp'),
+    
     
     
     

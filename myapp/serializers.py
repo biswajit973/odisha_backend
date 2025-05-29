@@ -248,7 +248,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Complaint
-        fields = ['id','category','user_name', 'service_type','subcategory', 'category_name','subcategory_name','custom_subcategory', 'location','address', 'status', 'comment','complaint_images']
+        fields = ['id','category','user_name', 'service_type','subcategory', 'description','category_name','subcategory_name','custom_subcategory', 'location','address', 'status', 'comment','complaint_images']
     def get_user_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
     def get_category_name(self, obj):
@@ -284,3 +284,8 @@ class CessPoolStatusUpdateSerializer(serializers.ModelSerializer):
         model =  CesspoolRequest
         fields = ["status","comment"]
             
+class BannerSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = PromotionalBanners
+        fields=['hyperlink','description','banner_image']            

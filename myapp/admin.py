@@ -18,6 +18,7 @@ admin.site.register(Complaint)
 admin.site.register(ComplaintCategory)
 admin.site.register(ComplaintSubCategory)
 admin.site.register(Complaint_images)
+admin.site.register(PromotionalBanners)
 
 
 
