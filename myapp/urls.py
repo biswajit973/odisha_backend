@@ -74,6 +74,7 @@ urlpatterns = [
 
     path('api/auth/send-otp/', views.SendOTPView.as_view(), name='send-otp'),
     path('api/auth/resend-otp/', views.resendOTPview.as_view(), name='resendotp'),
+    path('api/auth/verify-otp/',views.VerifyOTPView.as_view(),name="verify-otp"),
     
     
     

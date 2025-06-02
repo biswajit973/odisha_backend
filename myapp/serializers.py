@@ -288,4 +288,4 @@ class BannerSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PromotionalBanners
-        fields=['hyperlink','description','banner_image']            
+        fields=['id','hyperlink','description','banner_image']            

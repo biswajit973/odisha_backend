@@ -60,7 +60,7 @@ class Requests(models.Model):
     
    
     user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='requests',default=0)
-    service_type = models.CharField(default="waste pickup")
+    service_type = models.CharField(default="waste pickup",max_length=100)
     type = models.CharField(max_length=100)
     description = models.TextField()
     waste_type = models.CharField(max_length=200,null=True)
@@ -114,7 +114,7 @@ class Kalyanmandap_images(models.Model):
 class Kalyanmandap_booking(models.Model):
     kalyanmandap = models.ForeignKey(Kalyanmandap, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
-    service_type = models.CharField(default="mandap booking")
+    service_type = models.CharField(default="mandap booking",max_length=100)
     occasion = models.CharField(max_length=100)
     number_of_people = models.IntegerField()
     start_datetime = models.DateTimeField()
@@ -146,7 +146,7 @@ class PollutionReport(models.Model):
    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE)
-    service_type = models.CharField(default="pollution report")
+    service_type = models.CharField(default="pollution report",max_length=100)
     source = models.ForeignKey(PollutionSubCategory, on_delete=models.CASCADE, null=True, blank=True)
     custom_source = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField()
@@ -194,7 +194,7 @@ class Complaint(models.Model):
     category = models.ForeignKey(ComplaintCategory, on_delete=models.CASCADE, null=True)
     subcategory = models.ForeignKey(ComplaintSubCategory, on_delete=models.CASCADE, null=True, blank=True)
     custom_category = models.CharField(max_length=255, blank=True, null=True)  
-    service_type = models.CharField(default="complaints")
+    service_type = models.CharField(default="complaints",max_length=100)
     location = models.CharField(max_length=255, blank=True)
     address = models.TextField(blank=True)
     description = models.TextField()
@@ -212,7 +212,7 @@ class Complaint_images(models.Model):
 class CesspoolRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    service_type = models.CharField(default="cesspool")
+    service_type = models.CharField(default="cesspool",max_length=100)
     contact_number = models.CharField(max_length=15)
     location = models.CharField(max_length=255)  
     address = models.TextField()
@@ -235,6 +235,9 @@ class PromotionalBanners(models.Model):
     hyperlink = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True,null=True)
     banner_image = models.ImageField(upload_to="banner_images/")
+    
+    
+    
     
     
     

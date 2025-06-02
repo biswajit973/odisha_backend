@@ -30,6 +30,11 @@ class SendOTPView(APIView):
     def post(self, request):
         try:
             email = request.data.get('email')
+            
+            if User.objects.filter(email=email).exists():
+                
+                return Response({"message": "Email Already Exists"},status=status.HTTP_400_BAD_REQUEST)
+            
             secret_key = pyotp.random_base32()
             totp = pyotp.TOTP(secret_key, interval=300)
             otp_value = totp.now()
@@ -90,19 +95,12 @@ class resendOTPview(APIView):
             return Response({'error': 'Failed to send OTP email', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
             
-
-# Create your views here.
-class RegisterView(APIView):
+class VerifyOTPView(APIView):
     permission_classes = []
     serializer_class = RegisterSerializer
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        firstname = request.data.get('first_name')
-        lastname = request.data.get('last_name')
-        full_name = f"{firstname} {lastname}".strip()
-
-        email = request.data.get('email')
+        
         secret_key = request.data.get('secret_key')
         otp_value = request.data.get('otpValue')
         print(otp_value)
@@ -110,16 +108,37 @@ class RegisterView(APIView):
         veri_otp =pyotp.TOTP(secret_key,interval=300)
         print(secret_key)
         print(veri_otp)
+        
+        if  not secret_key or not otp_value:
+            return Response({'message': 'Missing secret_key, or otpValue'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if veri_otp.verify(otp_value, valid_window=1):
+                return Response({'message': 'OTP verified successfully'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'OTP verification failed', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-        if serializer.is_valid():
-            
-            if veri_otp.verify(otp_value,valid_window=1):
+
+class RegisterView(APIView):
+    permission_classes = []
+
+    def post(self,request):
+        
+        firstname = request.data.get('first_name')
+        lastname = request.data.get('last_name')
+        email = request.data.get('email')
+        fullname = f"{firstname} {lastname}".strip()
+        serializer = RegisterSerializer(data=request.data)
+        
+        if serializer.is_valid():            
                  serializer.save()
                  send_mail(
                     subject='Registration Successful – Welcome to Joda Municipality',
                     message=(
-                        f'Dear { full_name or "User"},\n\n'
+                        f'Dear { fullname or "User"},\n\n'
                         f'Congratulations! Your registration with Joda Municipality has been completed successfully.\n\n'
                         f'You can now log in using your registered email and password.\n\n'
                         f'If you have any questions or need support, feel free to reply to this email.\n\n'
@@ -131,8 +150,7 @@ class RegisterView(APIView):
                     fail_silently=False,
                  )
                  return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
-            else :
-                return Response({'message': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -759,9 +777,13 @@ class UserEachBookingView(APIView):
             booking = get_object_or_404(PollutionReport, id=booking_id, service_type=service_type)
             serializer = PollutionReportSerializer(booking)    
         
-        elif service_type == "cesspool request":
+        elif service_type == "cesspool":
             booking = get_object_or_404(CesspoolRequest, id=booking_id, service_type=service_type)
-            serializer = CesspoolRequestSerializer(booking)        
+            serializer = CesspoolRequestSerializer(booking)  
+            
+        elif service_type == "complaints":
+            booking = get_object_or_404(Complaint, id=booking_id, service_type=service_type)
+            serializer = ComplaintSerializer(booking)            
 
         else:
             return Response(
@@ -1097,7 +1119,7 @@ class AdminUpdateCesspoolRequestStatus(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 class BannersView(APIView):
-    permission_classes=[IsAuthenticated]
+    permission_classes=[]
     def get(self,request):
         try:
           banners = PromotionalBanners.objects.all()
