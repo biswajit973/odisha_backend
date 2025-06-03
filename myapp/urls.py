@@ -9,12 +9,14 @@ from . import views
 urlpatterns = [
     path('api/auth/register/', views.RegisterView.as_view(), name='register'),
     path('api/auth/login/', views.LoginView.as_view(), name='login'),
-    path('api/auth/admin-login/', views.AdminLoginView.as_view(), name='admin-login'),
-    path('api/auth/admin-logout/', views.AdminLogoutView.as_view(), name='admin-logout'),
+   
     path('api/auth/logout/', views.LogoutView.as_view(), name='logout'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('reset-password_api/', views.ResetPasswordRequestView.as_view(), name='reset_password_request_api'),
-    path('reset-password_api/confirm/', views.PasswordResetView.as_view(), name='reset_password_confirm_api'),
+    path('api/auth/send-password-reset-otp/', views.PasswordResetOTPView.as_view(), name='send-password-reset-otp'),
+    path('api/auth/resend-password-reset-otp/', views.ResendPasswordResetOTPView.as_view(), name='resend-password-reset-otp'),
+    path('api/auth/verify-password-reset-otp/',views.VerifyOTPView.as_view(),name="verify-password-reset-otp"),
+    
+    path('api/auth/reset-password/', views.PasswordResetView.as_view(), name='reset-password'),
     path('api/account-details/', views.AccountDetails.as_view(), name='account_details'),
     path('api/updateaccount-details/', views.UpdateUserProfileView.as_view(), name='updateaccount_details'),
     path('api/waste_mgmt/create/', views.CreateRequestView.as_view(), name='api/waste_mgmt/create/'),

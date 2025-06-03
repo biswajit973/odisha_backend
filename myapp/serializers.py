@@ -54,20 +54,17 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
     
-    
-class ResetPasswordRequestSerializer(serializers.Serializer):
+
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
     email = serializers.EmailField()
     
     def validate_email(self,value):
         if not User.objects.filter(email=value).exists():
             raise serializers.ValidationError("User with this email does not exist")
         return value
-
-
-class PasswordResetSerializer(serializers.Serializer):
-    uid  = serializers.CharField()
-    token = serializers.CharField()
-    new_password = serializers.CharField(write_only=True)
     
     
     
@@ -144,17 +141,48 @@ class EachRequestSerializer(serializers.ModelSerializer):
         
 class KalyanmandapBookingSerializer(serializers.ModelSerializer):
     mandap_name = serializers.CharField(source='kalyanmandap.mandap_name', read_only=True)
+    mandap_description = serializers.CharField(source='kalyanmandap.mandap_description', read_only=True)
+    mandap_address = serializers.CharField(source='kalyanmandap.mandap_address', read_only=True)
+    mandap_contact_number = serializers.CharField(source='kalyanmandap.mandap_contact_number', read_only=True)
+    mandap_capacity = serializers.CharField(source='kalyanmandap.mandap_capacity', read_only=True)
+    mandap_amenities =serializers.CharField(source='kalyanmandap.mandap_amenities', read_only=True)
+    mandap_minimum_booking_unit = serializers.CharField(source='kalyanmandap.mandap_minimum_booking_unit', read_only=True)
+    mandap_price_range = serializers.CharField(source='kalyanmandap.mandamandap_price_rangep_name', read_only=True)
+    mandap_price_note = serializers.CharField(source='kalyanmandap.mandap_price_note', read_only=True)
+    kalyanmandap_images = serializers.SerializerMethodField()
     class Meta:
         model = Kalyanmandap_booking
-        fields = ['id','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration','additional_requests','payment_method','status','comment']        
-        
+        fields = ['id','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
+                  'additional_requests','payment_method','status','comment'
+                  ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
+                  'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
+             
+    def get_kalyanmandap_images(self, obj):
+        images = obj.kalyanmandap.kalyanmandap_images.all()
+        return Kalyanmandap_imagesSerializer(images, many=True, context=self.context).data    
 
 class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
-    mandap_name = serializers.CharField(source='kalyanmandap.mandap_name', read_only=True)
     user_name = serializers.SerializerMethodField()
+    mandap_name = serializers.CharField(source='kalyanmandap.mandap_name', read_only=True)
+    mandap_description = serializers.CharField(source='kalyanmandap.mandap_description', read_only=True)
+    mandap_address = serializers.CharField(source='kalyanmandap.mandap_address', read_only=True)
+    mandap_contact_number = serializers.CharField(source='kalyanmandap.mandap_contact_number', read_only=True)
+    mandap_capacity = serializers.CharField(source='kalyanmandap.mandap_capacity', read_only=True)
+    mandap_amenities =serializers.CharField(source='kalyanmandap.mandap_amenities', read_only=True)
+    mandap_minimum_booking_unit = serializers.CharField(source='kalyanmandap.mandap_minimum_booking_unit', read_only=True)
+    mandap_price_range = serializers.CharField(source='kalyanmandap.mandamandap_price_rangep_name', read_only=True)
+    mandap_price_note = serializers.CharField(source='kalyanmandap.mandap_price_note', read_only=True)
+    kalyanmandap_images = serializers.SerializerMethodField()
     class Meta:
         model = Kalyanmandap_booking
-        fields = ['id','kalyanmandap','service_type','mandap_name','user','user_name','occasion','number_of_people','start_datetime','end_datetime','duration','additional_requests','payment_method','status']        
+        fields = ['id','user_name','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
+                  'additional_requests','payment_method','status','comment'
+                  ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
+                  'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
+             
+    def get_kalyanmandap_images(self, obj):
+        images = obj.kalyanmandap.kalyanmandap_images.all()
+        return Kalyanmandap_imagesSerializer(images, many=True, context=self.context).data    
     def get_user_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
 

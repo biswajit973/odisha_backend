@@ -32,7 +32,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     dob = models.DateField(null=True, blank=True)  
     address = models.TextField(blank=True)
     pincode = models.CharField(max_length=10, blank=True)
-    
+    role = models.CharField(max_length=100,blank=True,null=True)
+    department = models.CharField(max_length=100,blank=True,null=True)
+    is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -161,14 +163,6 @@ class Pollution_images(models.Model):
     image = models.ImageField(upload_to='pollution_images/')    
     
 
-
-
-  
-    
-    
-    
- 
-    
     
 class ComplaintCategory(models.Model):
     name = models.CharField(max_length=255)
@@ -205,7 +199,7 @@ class Complaint(models.Model):
 
 class Complaint_images(models.Model):
     complaint = models.ForeignKey(Complaint, related_name='complaint_images', on_delete=models.CASCADE)
-    image = models.TextField(blank=True)
+    image = models.ImageField(upload_to='complaint_images/')   
     
     
 
@@ -228,7 +222,7 @@ class CesspoolRequest(models.Model):
             
 class CesspoolRequest_images(models.Model):
     Cesspool = models.ForeignKey(CesspoolRequest,on_delete=models.CASCADE,related_name='cesspool_images')
-    image = models.TextField(blank=True)
+    image = models.ImageField(upload_to='cesspool_images/')   
     
  
 class PromotionalBanners(models.Model):    

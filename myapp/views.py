@@ -97,7 +97,6 @@ class resendOTPview(APIView):
             
 class VerifyOTPView(APIView):
     permission_classes = []
-    serializer_class = RegisterSerializer
 
     def post(self, request):
         
@@ -188,50 +187,7 @@ class LoginView(APIView):
 
 User = get_user_model()
 
-class AdminLoginView(APIView):
-    permission_classes = []
-    serializer_class = AdminLoginSerializer
 
-    def post(self, request):
-        serializer = AdminLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-
-            user = authenticate(request, email=email, password=password)
-            if user is not None:
-                
-                if not user.is_staff:
-                    user.is_staff = True  
-                    user.save()
-
-                refresh = RefreshToken.for_user(user)
-
-                return Response({
-                    "message": "Admin Login successful",
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "email": user.email
-                }, status=status.HTTP_200_OK)
-
-            return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class AdminLogoutView(APIView):
-    permission_classes = [IsAdminUser]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Logged out successfully'}, status=status.HTTP_205_RESET_CONTENT)
-        except Exception:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
-   
-    
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -250,58 +206,207 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes     
 from django.utils.http import urlsafe_base64_decode
         
-        
-class ResetPasswordRequestView(APIView):
+
+
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+
+class PasswordResetOTPView(APIView):
     permission_classes = []
-    serializer_class = ResetPasswordRequestSerializer
+
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            user = User.objects.get(email=email)
+            if not user :
+                return Response({"message": "Email Not Found (or) Invalid Email"}, status=status.HTTP_400_BAD_REQUEST)
+            name = user.first_name
+            secret_key = pyotp.random_base32()
+            totp = pyotp.TOTP(secret_key, interval=300)
+            otp_value = totp.now()
+            print(otp_value)
+
+            subject = 'Joda Municipality: Password Reset Code'
+            
+            html_content = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #000000; padding: 20px;">
+                        <div style="max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                            <div style="background-color: #000000; color: #ffffff; padding: 20px; text-align: center;">
+                                <h2 style="margin: 0;">Joda Municipality</h2>
+                            </div>
+                            <div style="padding: 20px;">
+                                <p style="font-size: 16px;">Dear {name},</p>
+                                <p style="font-size: 16px;">
+                                    To reset your password, please use the following One-Time Password (OTP):
+                                </p>
+                                <div style="text-align: center; margin: 20px 0;">
+                                    <span style="background-color: #ff6600; color: #ffffff; padding: 10px 20px; font-size: 20px; border-radius: 4px;">
+                                        {otp_value}
+                                    </span>
+                                </div>
+                                <p style="font-size: 16px;">
+                                    This code is valid for 5 minutes.
+                                </p>
+                                <p style="font-size: 16px;">
+                                    If you did not request this password reset, please ignore this email.
+                                </p>
+                                <p style="font-size: 16px;">
+                                    Thank you,<br/>
+                                    <strong>Joda Municipality</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                </html>
+            """
+            text_content = strip_tags(html_content)
+
+            email_message = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email='jodamunicipality@gmail.com',
+                to=[email]
+            )
+            email_message.attach_alternative(html_content, "text/html")
+            email_message.send(fail_silently=False)
+
+            return Response({'message': 'OTP sent to email', "secret_key": secret_key}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP email', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResendPasswordResetOTPView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            user = User.objects.get(email=email)
+            
+            name = user.first_name
+            secret_key = request.data.get('secret_key')
+            totp = pyotp.TOTP(secret_key, interval=300)
+            otp_value = totp.now()
+            print(otp_value)
+        
+            subject = 'Joda Municipality: Password Reset Code'
+            
+            html_content = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #000000; padding: 20px;">
+                        <div style="max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                            <div style="background-color: #000000; color: #ffffff; padding: 20px; text-align: center;">
+                                <h2 style="margin: 0;">Joda Municipality</h2>
+                            </div>
+                            <div style="padding: 20px;">
+                                <p style="font-size: 16px;">Dear {name},</p>
+                                <p style="font-size: 16px;">
+                                    To reset your password, please use the following One-Time Password (OTP):
+                                </p>
+                                <div style="text-align: center; margin: 20px 0;">
+                                    <span style="background-color: #ff6600; color: #ffffff; padding: 10px 20px; font-size: 20px; border-radius: 4px;">
+                                        {otp_value}
+                                    </span>
+                                </div>
+                                <p style="font-size: 16px;">
+                                    This code is valid for 5 minutes.
+                                </p>
+                                <p style="font-size: 16px;">
+                                    If you did not request this password reset, please ignore this email.
+                                </p>
+                                <p style="font-size: 16px;">
+                                    Thank you,<br/>
+                                    <strong>Joda Municipality</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                </html>
+            """
+            text_content = strip_tags(html_content)
+
+            email_message = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email='jodamunicipality@gmail.com',
+                to=[email]
+            )
+            email_message.attach_alternative(html_content, "text/html")
+            email_message.send(fail_silently=False)
+
+            return Response({'message': 'OTP resent to email'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP email', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+ 
+         
+
+
+
+class PasswordResetView(APIView):
+    permission_classes = []
+    serializer_class = PasswordResetSerializer
+
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
+        
+        email = serializer.validated_data['email']
+        new_password = serializer.validated_data['new_password']
+        
+        try:
             user = User.objects.get(email=email)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            reset_url = f"https://mobile.wemakesoftwares.com/reset-password/?uid={uid}&token={token}"
-            send_mail(
-                'Reset Password Request',
-                f'Click the link to reset your password: {reset_url}',
-                 from_email="pk93917@gmail.com",
-                recipient_list=[email],
-                fail_silently=False
-            )   
-            return Response({'message': 'Reset password email sent'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
-        
-        
-class PasswordResetView(APIView):
-    permission_classes = []
-    serializer_class = PasswordResetSerializer
-    def post(self,request):
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        if serializer.is_valid():
-            uid = serializer.validated_data['uid']
-            token = serializer.validated_data['token']
-            new_password = serializer.validated_data['new_password']
-            
-            try:
-                uid = urlsafe_base64_decode(uid).decode()
-                user = User.objects.get(pk=uid)
-            except (User.DoesNotExist, ValueError, TypeError):
-                return Response({"detail": "Invalid UID"}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-            if not default_token_generator.check_token(user, token):
-                return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save()
 
-            user.set_password(new_password)
-            user.save()
+        subject = 'Joda Municipality: Password Reset Successful'
+        html_content = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #000000; padding: 20px;">
+                    <div style="max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                        <div style="background-color: #000000; color: #ffffff; padding: 20px; text-align: center;">
+                            <h2 style="margin: 0;">Joda Municipality</h2>
+                        </div>
+                        <div style="padding: 20px;">
+                            <p style="font-size: 16px;">Dear {user.first_name},</p>
+                            <p style="font-size: 16px;">
+                                This is to confirm that your password has been successfully reset.
+                            </p>
+                            <div style="text-align: center; margin: 20px 0;">
+                                <span style="background-color: #ff6600; color: #ffffff; padding: 10px 20px; font-size: 10px; border-radius: 4px;">
+                                    Password Reset Successful
+                                </span>
+                            </div>
+                            <p style="font-size: 16px;">
+                                If you did not request this password reset, please contact our support team immediately.
+                            </p>
+                            <p style="font-size: 16px;">
+                                Thank you,<br/>
+                                <strong>Joda Municipality</strong>
+                            </p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        """
+        text_content = strip_tags(html_content)
 
-            return Response({"detail": "Password reset successful"}, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        email_message = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email='jodamunicipality@gmail.com',
+            to=[email]
+        )
+        email_message.attach_alternative(html_content, "text/html")
+        email_message.send(fail_silently=False)
+
+        return Response({"message": "Password reset successful"}, status=status.HTTP_200_OK)
+
                 
 
 class AccountDetails(APIView):    
@@ -762,27 +867,27 @@ class UserEachBookingView(APIView):
         service_type = service_type.lower()
 
         if service_type == "waste pickup":
-            booking = get_object_or_404(Requests, id=booking_id, service_type=service_type)
+            booking = get_object_or_404(Requests, id=booking_id, service_type=service_type,user=user)
             serializer = RequestSerializer(booking)
 
         elif service_type == "mandap booking":
             booking = get_object_or_404(
                 Kalyanmandap_booking.objects.select_related('kalyanmandap'),
                 id=booking_id,
-                service_type=service_type
+                service_type=service_type,user=user
             )
             serializer = KalyanmandapBookingSerializer(booking)
             
         elif service_type == "pollution report":
-            booking = get_object_or_404(PollutionReport, id=booking_id, service_type=service_type)
+            booking = get_object_or_404(PollutionReport, id=booking_id, service_type=service_type,user=user)
             serializer = PollutionReportSerializer(booking)    
         
         elif service_type == "cesspool":
-            booking = get_object_or_404(CesspoolRequest, id=booking_id, service_type=service_type)
+            booking = get_object_or_404(CesspoolRequest, id=booking_id, service_type=service_type,user=user)
             serializer = CesspoolRequestSerializer(booking)  
             
         elif service_type == "complaints":
-            booking = get_object_or_404(Complaint, id=booking_id, service_type=service_type)
+            booking = get_object_or_404(Complaint, id=booking_id, service_type=service_type,user=user)
             serializer = ComplaintSerializer(booking)            
 
         else:
@@ -922,10 +1027,10 @@ class CreateComplaintView(APIView):
             return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
         if serializer.is_valid():
             Complaint_instance = serializer.save(user=request.user)
-            for img_str in images_data:
+            for img in images_data:
                 Complaint_images.objects.create(
                     complaint = Complaint_instance,
-                    image = img_str
+                    image = img
                 )  
             return Response({"message": "Complaint submitted successfully"}, status=status.HTTP_200_OK)
         
@@ -942,7 +1047,7 @@ class UserComplaintsView(APIView):
             data = serializer.data
             for complaint in data:
                 complaint_images = Complaint_images.objects.filter(complaint_id=complaint['id'])
-                complaint['complaint_images']=[img.image for img in complaint_images]
+                complaint['complaint_images']=[img.image.url for img in complaint_images]
             return Response(data, status=status.HTTP_200_OK)
          except Complaint.DoesNotExist:
             return Response({"message": "No records found"}, status=status.HTTP_200_OK)
@@ -956,7 +1061,7 @@ class UserEachComplaintView(APIView):
             serializer = ComplaintSerializer(report)
             data = serializer.data
             complaint_images = Complaint_images.objects.filter(complaint_id=report.id)
-            data['complaint_images']=[img.image for img in complaint_images]
+            data['complaint_images']=[img.image.url for img in complaint_images]
             return Response(data, status=status.HTTP_200_OK)
             
          except Complaint.DoesNotExist:
@@ -973,7 +1078,7 @@ class AdminComplaintView(APIView):
             data = serializer.data
             for complaint in data:
                 complaint_images = Complaint_images.objects.filter(complaint_id=complaint['id'])
-                complaint['complaint_images']=[img.image for img in complaint_images]
+                complaint['complaint_images']=[img.image.url for img in complaint_images]
             return Response(data, status=status.HTTP_200_OK)
         except Complaint.DoesNotExist:
             return Response({"message": "No records found"}, status=status.HTTP_200_OK)
@@ -989,7 +1094,7 @@ class AdminEachComplaintReportView(APIView):
             serializer = ComplaintSerializer(report)
             data = serializer.data
             complaint_images = Complaint_images.objects.filter(complaint_id=report.id)
-            data['complaint_images']=[img.image for img in complaint_images]
+            data['complaint_images']=[img.image.url for img in complaint_images]
             return Response(data, status=status.HTTP_200_OK)
        except Complaint.DoesNotExist:
             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
@@ -1023,8 +1128,8 @@ class CreateCesspoolRequestView(APIView):
             if not images_data:
                 return Response({"message": "At least one image is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            for img_str in images_data:
-                CesspoolRequest_images.objects.create(Cesspool=cesspool_instance, image=img_str)
+            for img in images_data:
+                CesspoolRequest_images.objects.create(Cesspool=cesspool_instance, image=img)
 
             return Response({"message": "CessPool request raised Successfully"}, status=status.HTTP_200_OK)
 
@@ -1044,7 +1149,7 @@ class UserCesspoolRequests(APIView):
             data = serializer.data
             for cesspoolrequest in data:
                 cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspoolrequest['id'])
-                cesspoolrequest['cesspool_images']=[img.image for img in cesspool_images]
+                cesspoolrequest['cesspool_images']=[img.image.url for img in cesspool_images]
             return Response(data, status=status.HTTP_200_OK)
         except CesspoolRequest.DoesNotExist:
             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
@@ -1060,7 +1165,7 @@ class UserCesspoolEachRequest(APIView):
             serializer = CesspoolRequestSerializer(cesspool_request)
             data = serializer.data
             cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspool_request.id)
-            data['cesspool_images']=[img.image for img in cesspool_images]
+            data['cesspool_images']=[img.image.url for img in cesspool_images]
             return Response(data, status=status.HTTP_200_OK)
             
         except CesspoolRequest.DoesNotExist:
@@ -1079,7 +1184,7 @@ class AdminCesspoolrequestsView(APIView):
             data = serializer.data
             for cesspoolrequest in data:
                 cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspoolrequest['id'])
-                cesspoolrequest['cesspool_images']=[img.image for img in cesspool_images]
+                cesspoolrequest['cesspool_images']=[img.image.url for img in cesspool_images]
             return Response(data, status=status.HTTP_200_OK)
         
         except CesspoolRequest.DoesNotExist:
@@ -1097,7 +1202,7 @@ class AdminEachCesspoolrequestview(APIView):
             data = serializer.data
             data = serializer.data
             cesspool_images = CesspoolRequest_images.objects.filter(Cesspool_id=cesspool_request.id)
-            data['cesspool_images']=[img.image for img in cesspool_images]
+            data['cesspool_images']=[img.image.url for img in cesspool_images]
             return Response(data, status=status.HTTP_200_OK)
 
         except CesspoolRequest.DoesNotExist:
