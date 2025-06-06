@@ -3,6 +3,7 @@ import random
 from django.shortcuts import render
 
 from myapp.models import *
+from .models import *
 
 from .permissions import IsSuperUser
 
@@ -28,12 +29,12 @@ from django.contrib.auth import get_user_model
 # Create your views here.
 User = get_user_model()
 
-class SuperAdminLoginView(APIView):
+class AdminLoginView(APIView):
     permission_classes = []
-    serializer_class = SuperAdminLoginSerializer
+    serializer_class = AdminLoginSerializer
 
     def post(self, request):
-        serializer = SuperAdminLoginSerializer(data=request.data)
+        serializer = AdminLoginSerializer(data=request.data)
         print("Request data:", request.data) 
         if serializer.is_valid():
             email = serializer.validated_data['email']
@@ -41,9 +42,9 @@ class SuperAdminLoginView(APIView):
 
             user = authenticate(request, email=email, password=password)
             if user is not None:
-                if not user.is_superuser:
+                if not user.is_superuser and not user.is_admin:
                     return Response(
-                        {"error": "please login with superadmin credentials."},
+                        {"error": "please login with admin credentials."},
                         status=status.HTTP_403_FORBIDDEN
                     )
                 
@@ -56,10 +57,12 @@ class SuperAdminLoginView(APIView):
 
                 return Response({
                     "success": True,
-                    "message": "Super Admin Login successful",
+                    "message": "Login successful",
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
-                    "email": user.email
+                    "email": user.email,
+                    'department':user.department,
+                    'is_superuser':user.is_superuser,
                 }, status=status.HTTP_200_OK)
 
             return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -134,46 +137,7 @@ class DeleteAdminAPIView(APIView):
         return Response({'success': 'Admin deleted successfully'}, status=status.HTTP_200_OK)
         
 
-class AdminLoginView(APIView):
-    permission_classes = []
-    serializer_class = AdminLoginSerializer
-    
 
-    def post(self, request):
-        serializer = AdminLoginSerializer(data=request.data)
-        print("Request data:", request.data) 
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-
-            user = authenticate(request, email=email, password=password)
-            if user is not None:
-                if not user.is_admin:
-                    return Response(
-                        {"error": "please login with admin credentials."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-                
-
-
-                refresh = RefreshToken.for_user(user)
-                print("Refresh token:", refresh)
-                fullname = f"{user.first_name} {user.last_name}".strip()    
-                return Response({
-                    "success": True,
-                    "message": "Admin Login successful",
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "email": user.email,
-                    "fullname": fullname,
-                    "department":user.department
-                }, status=status.HTTP_200_OK)
-
-            return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 class RequestsListView(APIView):
     permission_classes = [IsAdminUser]
     serializer_class   = RequestsListSerializer
@@ -311,3 +275,39 @@ class AdminUpdateMandapBookingStatusView(APIView):
             serializer.save()
             return Response({'message': 'Booking status updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
+    
+class CreateBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def post(self,request):
+        serializer = BannerSerializer(data=request.data)   
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"banner created successfully"},status=status.HTTP_200_OK) 
+        
+
+class DeleteBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def delete(self,request,pk):
+        try:
+            banner = PromotionalBanners.objects.get(id=pk)
+            banner.delete()
+            return Response({"message":"banner deleted successfully"}, status=status.HTTP_200_OK)
+        except PromotionalBanners.DoesNotExist:
+            return Response({"message":"Banner not found"}, status=status.HTTP_404_NOT_FOUND)
+
+ 
+class UpdateBannerView(APIView):
+    permission_classes=[IsAdminUser]
+    def put(self,request,pk):
+        
+        banner = get_object_or_404(PromotionalBanners,id=pk)
+        serializer = BannerSerializer(banner,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"Banner updated successfully"},status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+    

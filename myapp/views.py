@@ -20,6 +20,8 @@ import pyotp
 
 from django.contrib.auth import get_user_model
 
+from adminapp.models import *
+
 
 User = get_user_model()
 
@@ -820,14 +822,7 @@ class UserBookingsView(APIView):
             mandap_data = KalyanmandapBookingSerializer(mandap_bookings, many=True)
             results['mandap_bookings'] = mandap_data.data
         
-        if type_filter in ['pollution', 'all']:
-            pollution_reports = PollutionReport.objects.filter(
-                user=user,
-                status__in=status_list
-            )
-            pollution_data = PollutionReportSerializer(pollution_reports, many=True)
-            results['pollution_bookings'] = pollution_data.data    
-        
+    
         if type_filter in ['complaints', 'all']:
             complaints_all = Complaint.objects.filter(
                 user=user,
@@ -878,9 +873,7 @@ class UserEachBookingView(APIView):
             )
             serializer = KalyanmandapBookingSerializer(booking)
             
-        elif service_type == "pollution report":
-            booking = get_object_or_404(PollutionReport, id=booking_id, service_type=service_type,user=user)
-            serializer = PollutionReportSerializer(booking)    
+           
         
         elif service_type == "cesspool":
             booking = get_object_or_404(CesspoolRequest, id=booking_id, service_type=service_type,user=user)
@@ -900,113 +893,6 @@ class UserEachBookingView(APIView):
     
     
 
-
-
-
-
-class PollutionCategoryView(APIView):
-    permission_classes = [IsAuthenticated] 
-    def get(self, request):
-        categories = PollutionTypeMaster.objects.filter(active_status=True)
-        serializer = PollutionTypeSerializer(categories, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class CreateReportView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = PollutionReportSerializer(data=request.data)
-        if not request.FILES.getlist('pollution_images'):
-            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
-        if serializer.is_valid():
-            Pollutionreport_instance = serializer.save(user=request.user)
-            for image in request.FILES.getlist('pollution_images'):
-                Pollution_images.objects.create(
-                    pollutionreport = Pollutionreport_instance,
-                    image = image
-                )  
-            return Response({"message": "Report submitted successfully"}, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
- 
-class UserReportsView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-         try:
-            reports = PollutionReport.objects.filter(user=request.user)
-            serializer = PollutionReportSerializer(reports, many=True)
-            data = serializer.data
-            for pollutionreport in data:
-                pollution_images = Pollution_images.objects.filter(pollutionreport_id=pollutionreport['id'])
-                pollutionreport['pollution_images']=[img.image.url for img in pollution_images]
-            return Response(data, status=status.HTTP_200_OK)
-        
-         except PollutionReport.DoesNotExist:
-            return Response({"message": "No records found"}, status=status.HTTP_200_OK)
-
-class UserEachReportView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request,pk):
-         try:
-            report= PollutionReport.objects.get(user=request.user,id=pk)
-            serializer = PollutionReportSerializer(report)
-            data = serializer.data
-            pollution_images = Pollution_images.objects.filter(pollutionreport_id=report.id)
-            data['pollution_images']=[img.image.url for img in pollution_images]
-            return Response(data, status=status.HTTP_200_OK)
-         except PollutionReport.DoesNotExist:
-            return Response({"message": "No record found"}, status=status.HTTP_200_OK)        
-
-
-
-class AdminReportView(APIView):
-    permission_classes = [IsAdminUser]
-    def get(self, request):
-        
-        try:
-            reports = PollutionReport.objects.all()
-            serializer = PollutionReportSerializer(reports,many=True)
-            data = serializer.data
-            for pollutionreport in data:
-                pollution_images = Pollution_images.objects.filter(pollutionreport_id=pollutionreport['id'])
-                pollutionreport['pollution_images']=[img.image.url for img in pollution_images]
-            return Response(data, status=status.HTTP_200_OK)
-        except PollutionReport.DoesNotExist:
-            return Response({"message": "No records found"}, status=status.HTTP_200_OK)
-
-        
-    
-    
-class AdminEachReportView(APIView):
-    permission_classes = [IsAdminUser]
-    def get(self, request, pk):
-       try:
-            report = PollutionReport.objects.get(id=pk)
-            serializer = PollutionReportSerializer(report)
-            data = serializer.data
-            pollution_images = Pollution_images.objects.filter(pollutionreport_id=report.id)
-            data['pollution_images']=[img.image.url for img in pollution_images]
-            return Response(data, status=status.HTTP_200_OK)
-       except PollutionReport.DoesNotExist:
-            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
-
-class AdminUpdateReportStatusView(APIView):
-    permission_classes = [IsAdminUser] 
-    def put(self, request, pk):
-        report = get_object_or_404(PollutionReport, pk=pk)
-        serializer = PollutionReportStatusUpdateSerializer(report, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Status updated successfully."}, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 
 
 class ComplaintCategoryView(APIView):
@@ -1267,7 +1153,13 @@ class UpdateBannerView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
-                    
+class UserNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+        serializer = NotificationSerializer(notifications, many=True)
+        return Response(serializer.data)                    
         
         
           

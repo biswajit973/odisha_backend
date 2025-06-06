@@ -47,6 +47,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+    
     
     
 STATUS_CHOICES = [
@@ -57,10 +60,39 @@ STATUS_CHOICES = [
         ('completed','completed')
     ]    
 
+from django.db import models, transaction
 
+class BookingSequence(models.Model):
+    
+    last_booking_id = models.BigIntegerField(default=1000)
+
+    @classmethod
+    def get_next_booking_id(cls):
+        with transaction.atomic():
+            seq, created = cls.objects.get_or_create(pk=1)
+            seq.last_booking_id += 1
+            seq.save()
+            return seq.last_booking_id
+        
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    booking_id = models.BigIntegerField(null=True,blank=True)
+    title = models.CharField(max_length=255)
+    status = models.CharField(max_length=50,null=True,blank=True)
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} for booking {self.booking_id}"
+    
+    
+
+        
+        
 class Requests(models.Model):
     
-   
+    booking_id = models.BigIntegerField(unique=True, editable=False,null=True,blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='requests',default=0)
     service_type = models.CharField(default="waste pickup",max_length=100)
     type = models.CharField(max_length=100)
@@ -83,7 +115,30 @@ class Requests(models.Model):
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
     
-    
+    def save(self, *args, **kwargs):
+        is_update = self.pk is not None
+        old_status = None
+        old_comment = None
+
+        if is_update:
+            old = Requests.objects.get(pk=self.pk)
+            old_status = old.status
+            old_comment = old.comment
+
+        if not self.booking_id:
+            self.booking_id = BookingSequence.get_next_booking_id()
+
+        super().save(*args, **kwargs)
+
+        if is_update and (self.status != old_status or self.comment != old_comment):
+            Notification.objects.create(
+                user=self.user,
+                booking_id=self.booking_id,
+                title=f"Update on your {self.service_type} request",
+                status=self.status,
+                comment=self.comment or ''
+            )
+
     
 
 
@@ -98,6 +153,7 @@ class Request_images(models.Model):
 
 
 class Kalyanmandap(models.Model):
+    
     mandap_name = models.CharField(max_length=100)
     mandap_description = models.TextField(blank=True,null=True)
     mandap_address = models.TextField(blank=True,null=True)
@@ -114,6 +170,7 @@ class Kalyanmandap_images(models.Model):
     image = models.ImageField(upload_to='kalyanmandap_images/')    
     
 class Kalyanmandap_booking(models.Model):
+    booking_id = models.BigIntegerField(unique=True, editable=False,null=True,blank=True)
     kalyanmandap = models.ForeignKey(Kalyanmandap, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='kalyanmandap_booking')
     service_type = models.CharField(default="mandap booking",max_length=100)
@@ -127,40 +184,33 @@ class Kalyanmandap_booking(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     
+    def save(self, *args, **kwargs):
+        is_update = self.pk is not None
+        old_status = None
+        old_comment = None
+
+        if is_update:
+            old = Kalyanmandap_booking.objects.get(pk=self.pk)
+            old_status = old.status
+            old_comment = old.comment
+
+        if not self.booking_id:
+            self.booking_id = BookingSequence.get_next_booking_id()
+
+        super().save(*args, **kwargs)
+
+        if is_update and (self.status != old_status or self.comment != old_comment):
+            Notification.objects.create(
+                user=self.user,
+                booking_id=self.booking_id,
+                title=f"Update on your {self.service_type} request",
+                status=self.status,
+                comment=self.comment or ''
+            )
+    
     
  
-class PollutionTypeMaster(models.Model):
-    name = models.CharField(max_length=100)
-    active_status = models.BooleanField(default=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-class PollutionSubCategory(models.Model):
-    pollution_type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE, related_name='subcategories')
-    name = models.CharField(max_length=150)
-
-    def __str__(self):
-        return f"{self.pollution_type.name} - {self.name}"
-
-class PollutionReport(models.Model):
    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    type = models.ForeignKey(PollutionTypeMaster, on_delete=models.CASCADE)
-    service_type = models.CharField(default="pollution report",max_length=100)
-    source = models.ForeignKey(PollutionSubCategory, on_delete=models.CASCADE, null=True, blank=True)
-    custom_source = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField()
-    location = models.CharField(max_length=255)
-    address = models.TextField()
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
-    comment = models.TextField(blank=True, null=True)
-    submitted_on = models.DateTimeField(auto_now_add=True)
-    
-class Pollution_images(models.Model):
-    pollutionreport = models.ForeignKey(PollutionReport,on_delete=models.CASCADE, related_name='pollution_images')
-    image = models.ImageField(upload_to='pollution_images/')    
     
 
     
@@ -184,6 +234,7 @@ class ComplaintSubCategory(models.Model):
     
 
 class Complaint(models.Model):
+    booking_id = models.BigIntegerField(unique=True, editable=False,null=True,blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(ComplaintCategory, on_delete=models.CASCADE, null=True)
     subcategory = models.ForeignKey(ComplaintSubCategory, on_delete=models.CASCADE, null=True, blank=True)
@@ -195,7 +246,30 @@ class Complaint(models.Model):
     submitted_on = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(blank=True, null=True)
+    
+    def save(self, *args, **kwargs):
+        is_update = self.pk is not None
+        old_status = None
+        old_comment = None
 
+        if is_update:
+            old = Complaint.objects.get(pk=self.pk)
+            old_status = old.status
+            old_comment = old.comment
+
+        if not self.booking_id:
+            self.booking_id = BookingSequence.get_next_booking_id()
+
+        super().save(*args, **kwargs)
+
+        if is_update and (self.status != old_status or self.comment != old_comment):
+            Notification.objects.create(
+                user=self.user,
+                booking_id=self.booking_id,
+                title=f"Update on your {self.service_type} request",
+                status=self.status,
+                comment=self.comment or ''
+            )
 
 class Complaint_images(models.Model):
     complaint = models.ForeignKey(Complaint, related_name='complaint_images', on_delete=models.CASCADE)
@@ -204,6 +278,7 @@ class Complaint_images(models.Model):
     
 
 class CesspoolRequest(models.Model):
+    booking_id = models.BigIntegerField(unique=True, editable=False,null=True,blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     service_type = models.CharField(default="cesspool",max_length=100)
@@ -219,6 +294,33 @@ class CesspoolRequest(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        is_update = self.pk is not None
+        old_status = None
+        old_comment = None
+
+        if is_update:
+            old = CesspoolRequest.objects.get(pk=self.pk)
+            old_status = old.status
+            old_comment = old.comment
+
+        if not self.booking_id:
+            self.booking_id = BookingSequence.get_next_booking_id()
+
+        super().save(*args, **kwargs)
+
+        # Notify only if status or comment changed
+        if is_update and (self.status != old_status or self.comment != old_comment):
+            Notification.objects.create(
+                user=self.user,
+                booking_id=self.booking_id,
+                title=f"Update on your {self.service_type} request",
+                status=self.status,
+                comment=self.comment or ''
+            )
+            
+            
             
 class CesspoolRequest_images(models.Model):
     Cesspool = models.ForeignKey(CesspoolRequest,on_delete=models.CASCADE,related_name='cesspool_images')
@@ -229,6 +331,10 @@ class PromotionalBanners(models.Model):
     hyperlink = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True,null=True)
     banner_image = models.ImageField(upload_to="banner_images/")
+    
+
+
+    
     
     
     

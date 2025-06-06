@@ -113,7 +113,7 @@ class RequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Requests
-        fields = ['id','service_type','type', 'description', 'waste_type', 'address','waste_type_other', 'date','house_number','floor','block','landmark','location', 'contact_number', 'time_slot', 'payment_method', 'payment_status', 'request_images', 'status', 'comment']
+        fields = ['id','booking_id','service_type','type', 'description', 'waste_type', 'address','waste_type_other', 'date','house_number','floor','block','landmark','location', 'contact_number', 'time_slot', 'payment_method', 'payment_status', 'request_images', 'status', 'comment']
 
     
 
@@ -152,7 +152,7 @@ class KalyanmandapBookingSerializer(serializers.ModelSerializer):
     kalyanmandap_images = serializers.SerializerMethodField()
     class Meta:
         model = Kalyanmandap_booking
-        fields = ['id','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
+        fields = ['id','booking_id','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
                   'additional_requests','payment_method','status','comment'
                   ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
                   'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
@@ -175,7 +175,7 @@ class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
     kalyanmandap_images = serializers.SerializerMethodField()
     class Meta:
         model = Kalyanmandap_booking
-        fields = ['id','user_name','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
+        fields = ['id','booking_id','user_name','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
                   'additional_requests','payment_method','status','comment'
                   ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
                   'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
@@ -199,54 +199,6 @@ class RequestStatusUpdateSerializer(serializers.ModelSerializer):
         fields = ['status','comment']        
         
 
-
-class PollutionSubCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PollutionSubCategory
-        fields = ['id', 'name']
-
-class PollutionTypeSerializer(serializers.ModelSerializer):
-    subcategories = PollutionSubCategorySerializer(many=True, read_only=True)
-
-    class Meta:
-        model = PollutionTypeMaster
-        fields = ['id', 'name', 'subcategories']
-        
-        
-class Pollution_imagesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Pollution_images
-        fields = ['image']        
-
-class PollutionReportSerializer(serializers.ModelSerializer):
-    comment = serializers.CharField(required=False, allow_blank=True)
-    pollution_images = Pollution_imagesSerializer(many=True, read_only=True)
-    custom_source =  serializers.CharField(required=False, allow_blank=True)
-    user_name = serializers.SerializerMethodField()
-    
-    type_name = serializers.SerializerMethodField()
-    source_name = serializers.SerializerMethodField()
-    class Meta:
-        model = PollutionReport
-        fields = ['id','user_name','type', 'source', 'type_name','source_name','custom_source', 'service_type', 'location','address', 'status', 'comment','pollution_images']
-    def get_user_name(self, obj):
-        return f"{obj.user.first_name} {obj.user.last_name}".strip()
-    def get_type_name(self, obj):
-        return obj.type.name if obj.type else None
-    def get_source_name(self, obj):
-        return obj.source.name if obj.source else None
-
-
-class PollutionReportStatusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PollutionReport
-        fields = ['status','comment']    
-
-
-
-
-
-
 class ComplaintSubCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ComplaintSubCategory
@@ -268,7 +220,7 @@ class Complaint_imagesSerializer(serializers.ModelSerializer):
 class ComplaintSerializer(serializers.ModelSerializer):
     comment = serializers.CharField(required=False, allow_blank=True)
     complaint_images = Complaint_imagesSerializer(many=True, read_only=True)
-    custom_subcategory =  serializers.CharField(required=False, allow_blank=True)
+    custom_category =  serializers.CharField(required=False, allow_blank=True)
     user_name = serializers.SerializerMethodField()
 
     category_name = serializers.SerializerMethodField()
@@ -276,7 +228,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Complaint
-        fields = ['id','category','user_name', 'service_type','subcategory', 'description','category_name','subcategory_name','custom_subcategory', 'location','address', 'status', 'comment','complaint_images']
+        fields = ['id','booking_id','category','user_name', 'service_type','subcategory', 'description','category_name','subcategory_name','custom_category', 'location','address', 'status', 'comment','complaint_images']
     def get_user_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
     def get_category_name(self, obj):
@@ -302,7 +254,7 @@ class CesspoolRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model =  CesspoolRequest
-        fields = ['id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','cesspool_images']
+        fields = ['id','booking_id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','cesspool_images']
 
 
 
@@ -317,3 +269,15 @@ class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = PromotionalBanners
         fields=['id','hyperlink','description','banner_image']            
+
+
+
+# serializers.py
+
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id','booking_id', 'title', 'status', 'comment', 'created_at']
+        

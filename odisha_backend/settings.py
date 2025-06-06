@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'myapp',
+    'adminapp',
 ]
 
 MIDDLEWARE = [
@@ -98,9 +99,10 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_AUTO_SIGNUP = False  
 
+# X_FRAME_OPTIONS = 'ALLOWALL'
 
 
-# Database
+# Database  
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
