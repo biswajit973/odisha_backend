@@ -14,10 +14,18 @@ class AdminLoginSerializer(serializers.Serializer):
     
 
 
-class CreateAdminSerializer(serializers.ModelSerializer):
+class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'password', 'role', 'department']
+
+
+
+class UpdateAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'role', 'department']
+        
 
 
 class AdminListSerializer(serializers.ModelSerializer):
@@ -43,7 +51,7 @@ class RequestsListSerializer(serializers.ModelSerializer):
 class RequestStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Requests
-        fields = ['status','comment']  
+        fields = ['status','comment','payment_amount']  
 
 
 
@@ -144,7 +152,7 @@ class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Kalyanmandap_booking
         fields = ['id','booking_id','user_name','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
-                  'additional_requests','payment_method','status','comment'
+                  'additional_requests','payment_method','status','comment','payment_amount'
                   ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
                   'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
              
@@ -159,7 +167,7 @@ class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
 class MandapBookingStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Kalyanmandap_booking
-        fields = ['status','comment']        
+        fields = ['status','comment','payment_amount']        
         
 
 

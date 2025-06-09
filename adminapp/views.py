@@ -126,7 +126,23 @@ class CreateAdminAPIView(APIView):
         )
 
         return Response({'success': 'Admin created successfully'}, status=status.HTTP_201_CREATED)
-    
+
+class UpdateAdminView(APIView):    
+    permission_classes=[IsSuperUser]
+    def put(self,request,pk):
+        try:
+            admin = User.objects.get(id=pk)
+        except User.DoesNotExist :
+              return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = UpdateAdminSerializer(admin,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"Details Updated Successfully"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors,status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+            
     
 class DeleteAdminAPIView(APIView):
     permission_classes = [IsSuperUser]

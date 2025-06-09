@@ -457,9 +457,9 @@ class CreateRequestView(APIView):
             Request_images.objects.create(
                 request = request_instance,
                 image = image
-            )   
+            )
         
-        return Response({"message": "Request created successfully"}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Request created successfully","booking_id":request_instance.booking_id}, status=status.HTTP_201_CREATED)
         
         
         
@@ -580,24 +580,6 @@ class RequestsPersonalWasteListView(APIView):
         
        
 
-# class StatusUpdateView(APIView):
-#     permission_classes = [IsAdminUser]
-
-#     def post(self, request,pk):
-#         serializer = StatusUpdateSerializer(data=request.data)
-#         if serializer.is_valid():
-#             try:
-#                request_instance =  Requests.objects.get(id=pk)
-#             except Requests.DoesNotExist:
-#                 return Response({"error": "Request not found."}, status=status.HTTP_404_NOT_FOUND)
-            
-#             if StatusUpdates.objects.filter(request=request_instance).exists():
-#                 return Response({"error": "Status has already been updated for this request."}, status=status.HTTP_400_BAD_REQUEST)
-            
-#             serializer.save(request=request_instance,updated_by=request.user)
-#             return Response({"message": "Status updated successfully."}, status=status.HTTP_201_CREATED)
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 
     
 class AdminCreateKalyanmandapView(APIView):
@@ -697,6 +679,7 @@ class BookKalyanmandapView(APIView):
             serializer.save(user=request.user)  
             return Response({
                 "message": "Kalyanmandap booking submitted successfully.",
+                
                 "booking": serializer.data
             }, status=status.HTTP_201_CREATED)
         
@@ -918,7 +901,7 @@ class CreateComplaintView(APIView):
                     complaint = Complaint_instance,
                     image = img
                 )  
-            return Response({"message": "Complaint submitted successfully"}, status=status.HTTP_200_OK)
+            return Response({"message": "Complaint submitted successfully","booking_id":Complaint_instance.booking_id}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1017,7 +1000,7 @@ class CreateCesspoolRequestView(APIView):
             for img in images_data:
                 CesspoolRequest_images.objects.create(Cesspool=cesspool_instance, image=img)
 
-            return Response({"message": "CessPool request raised Successfully"}, status=status.HTTP_200_OK)
+            return Response({"message": "CessPool request raised Successfully","booking_id":cesspool_instance.booking_id}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -100,7 +100,6 @@ class Request_imagesSerializer(serializers.ModelSerializer):
 class RequestSerializer(serializers.ModelSerializer):
     request_images = Request_imagesSerializer(many=True, read_only=True)
     waste_type_other = serializers.CharField(required=False, allow_blank=True)
-    payment_status = serializers.BooleanField(required=False, default=False)
     time_slot = serializers.CharField(required=False, allow_blank=True)
     date= serializers.DateField(required=False, allow_null=True)
     house_number = serializers.CharField(required=False, allow_blank=True)
@@ -113,7 +112,7 @@ class RequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Requests
-        fields = ['id','booking_id','service_type','type', 'description', 'waste_type', 'address','waste_type_other', 'date','house_number','floor','block','landmark','location', 'contact_number', 'time_slot', 'payment_method', 'payment_status', 'request_images', 'status', 'comment']
+        fields = ['id','booking_id','service_type','type', 'description', 'waste_type', 'address','waste_type_other', 'date','house_number','floor','block','landmark','location', 'contact_number', 'time_slot', 'payment_method', 'request_images', 'status', 'comment']
 
     
 
@@ -188,15 +187,7 @@ class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
 
 
 
-class MandapBookingStatusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Kalyanmandap_booking
-        fields = ['status','comment']
-        
-class RequestStatusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Requests
-        fields = ['status','comment']        
+       
         
 
 class ComplaintSubCategorySerializer(serializers.ModelSerializer):
@@ -277,7 +268,14 @@ class BannerSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    
+    notification_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = Notification
-        fields = ['id','booking_id', 'title', 'status', 'comment', 'created_at']
-        
+        fields = ['notification_count','id','booking_id', 'title', 'status', 'comment','payment_status','payment_amount','created_at']
+    
+    def get_notification_count(self,obj):
+        return Notification.objects.filter(user=obj.user).count()
+    
+    

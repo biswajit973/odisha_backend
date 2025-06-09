@@ -82,6 +82,9 @@ class Notification(models.Model):
     status = models.CharField(max_length=50,null=True,blank=True)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    payment_status=models.CharField(max_length=50,null=True,blank=True)
+    payment_amount = models.CharField(null=True, blank=True)
+
 
     def __str__(self):
         return f"{self.title} for booking {self.booking_id}"
@@ -109,7 +112,7 @@ class Requests(models.Model):
     contact_number=models.CharField(max_length=100)
     time_slot=models.CharField(max_length=100)
     payment_method=models.CharField(max_length=100)
-    payment_status=models.BooleanField(default=False)
+    payment_amount = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
@@ -117,29 +120,38 @@ class Requests(models.Model):
     
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
-        old_status = None
-        old_comment = None
-
-        if is_update:
-            old = Requests.objects.get(pk=self.pk)
-            old_status = old.status
-            old_comment = old.comment
-
+       
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
 
         super().save(*args, **kwargs)
 
-        if is_update and (self.status != old_status or self.comment != old_comment):
-            Notification.objects.create(
-                user=self.user,
-                booking_id=self.booking_id,
-                title=f"Update on your {self.service_type} request",
-                status=self.status,
-                comment=self.comment or ''
-            )
+        if is_update:
+            include_payment = self.waste_type and self.waste_type.lower() == "private waste"
+            
+            existing_notification = Notification.objects.filter(
+            user=self.user,
+            booking_id=self.booking_id
+        ).first()
 
-    
+            if existing_notification:
+                existing_notification.status = self.status
+                existing_notification.comment = self.comment or ''
+                existing_notification.payment_amount = self.payment_amount if include_payment else None
+                existing_notification.payment_status = "pending" if include_payment else None
+                existing_notification.title =f"Your {self.service_type.title()} Request Has Been Approved"
+            else:
+                Notification.objects.create(
+                    user=self.user,
+                    booking_id=self.booking_id,
+                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    status=self.status,
+                    comment=self.comment or '',
+                    payment_amount=self.payment_amount if include_payment else None,
+                    payment_status = "pending" if include_payment else None
+                )
+
+
 
 
 class Request_images(models.Model):
@@ -181,34 +193,46 @@ class Kalyanmandap_booking(models.Model):
     duration = models.CharField(max_length=100)
     additional_requests = models.TextField()
     payment_method = models.CharField(max_length=100)
+    payment_amount = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
-        old_status = None
-        old_comment = None
-
-        if is_update:
-            old = Kalyanmandap_booking.objects.get(pk=self.pk)
-            old_status = old.status
-            old_comment = old.comment
-
+       
+       
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
 
         super().save(*args, **kwargs)
 
-        if is_update and (self.status != old_status or self.comment != old_comment):
-            Notification.objects.create(
-                user=self.user,
-                booking_id=self.booking_id,
-                title=f"Update on your {self.service_type} request",
-                status=self.status,
-                comment=self.comment or ''
-            )
-    
-    
+        if is_update:
+        
+            existing_notification = Notification.objects.filter(
+            user=self.user,
+            booking_id=self.booking_id
+        ).first()
+
+            if existing_notification:
+                existing_notification.status = self.status
+                existing_notification.comment = self.comment or ''
+                existing_notification.payment_amount = self.payment_amount or None
+                existing_notification.payment_status = "pending" or None
+                existing_notification.title =f"Your {self.service_type.title()} Has Been Completed"
+                existing_notification.save()
+            else:
+                Notification.objects.create(
+                    user=self.user,
+                    booking_id=self.booking_id,
+                    title=f"Your {self.service_type.title()} Has Been Completed",
+                    status=self.status,
+                    comment=self.comment or '',
+                    payment_amount=self.payment_amount,
+                    payment_status = "pending"
+                    
+                )
+        
+        
  
    
     
@@ -249,27 +273,38 @@ class Complaint(models.Model):
     
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
-        old_status = None
-        old_comment = None
-
-        if is_update:
-            old = Complaint.objects.get(pk=self.pk)
-            old_status = old.status
-            old_comment = old.comment
-
+       
+        
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
 
         super().save(*args, **kwargs)
 
-        if is_update and (self.status != old_status or self.comment != old_comment):
-            Notification.objects.create(
-                user=self.user,
-                booking_id=self.booking_id,
-                title=f"Update on your {self.service_type} request",
-                status=self.status,
-                comment=self.comment or ''
-            )
+        if is_update:
+            
+            existing_notification = Notification.objects.filter(
+            user=self.user,
+            booking_id=self.booking_id
+        ).first()
+
+            if existing_notification:
+                existing_notification.status = self.status
+                existing_notification.comment = self.comment or ''
+                existing_notification.title = f"Your {self.service_type.title()} Request Has Been Approved"
+                existing_notification.payment_status = None
+                existing_notification.payment_amount = None
+                existing_notification.save()
+            else:
+                
+                Notification.objects.create(
+                    user=self.user,
+                    booking_id=self.booking_id,
+                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    status=self.status,
+                    comment=self.comment or '',
+                    payment_status = None,
+                    payment_amount = None
+                )
 
 class Complaint_images(models.Model):
     complaint = models.ForeignKey(Complaint, related_name='complaint_images', on_delete=models.CASCADE)
@@ -297,13 +332,7 @@ class CesspoolRequest(models.Model):
     
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
-        old_status = None
-        old_comment = None
-
-        if is_update:
-            old = CesspoolRequest.objects.get(pk=self.pk)
-            old_status = old.status
-            old_comment = old.comment
+       
 
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
@@ -311,16 +340,33 @@ class CesspoolRequest(models.Model):
         super().save(*args, **kwargs)
 
         # Notify only if status or comment changed
-        if is_update and (self.status != old_status or self.comment != old_comment):
-            Notification.objects.create(
-                user=self.user,
-                booking_id=self.booking_id,
-                title=f"Update on your {self.service_type} request",
-                status=self.status,
-                comment=self.comment or ''
-            )
+        if is_update:
             
-            
+            existing_notification = Notification.objects.filter(
+            user=self.user,
+            booking_id=self.booking_id
+        ).first()
+
+            if existing_notification:
+                existing_notification.status = self.status
+                existing_notification.comment = self.comment or ''
+                existing_notification.title = f"Your {self.service_type.title()} Request Has Been Approved"
+                existing_notification.payment_status = None
+                existing_notification.payment_amount = None
+                existing_notification.save()
+            else:
+                
+                Notification.objects.create(
+                    user=self.user,
+                    booking_id=self.booking_id,
+                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    status=self.status,
+                    comment=self.comment or '',
+                    payment_status = None,
+                    payment_amount = None
+                )
+                
+                
             
 class CesspoolRequest_images(models.Model):
     Cesspool = models.ForeignKey(CesspoolRequest,on_delete=models.CASCADE,related_name='cesspool_images')
