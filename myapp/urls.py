@@ -67,15 +67,17 @@ urlpatterns = [
     # path('api/cesspool_mgmt/admin/report/<int:pk>/',views.AdminEachCesspoolrequestview.as_view(),name="admin-each-cesspool-request"),
     # path('api/cesspool_mgmt/admin/update-status/<int:pk>/',views.AdminUpdateCesspoolRequestStatus.as_view(), name='cesspoolrequest-update-status'),
     path('api/banners/',views.BannersView.as_view(), name='banners'),
-   
-
-   
+    
 
     path('api/auth/send-otp/', views.SendOTPView.as_view(), name='send-otp'),
     path('api/auth/resend-otp/', views.resendOTPview.as_view(), name='resendotp'),
     path('api/auth/verify-otp/',views.VerifyOTPView.as_view(),name="verify-otp"),
     
     path('api/user/notifications/', views.UserNotificationsView.as_view(), name='user-notifications'),
+    path('api/user/filternotifications/', views.FilterNotifications.as_view(), name='userfilter-notifications'),
+    path('api/user/notification-details/', views.NotificationDetailsView.as_view(), name='user-notification-details'),
+    path('api/update-payment/',views.Updatepaymentview.as_view(),name='update-payment')
+    
 
     
     

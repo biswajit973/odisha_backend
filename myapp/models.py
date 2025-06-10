@@ -76,6 +76,7 @@ class BookingSequence(models.Model):
         
 
 class Notification(models.Model):
+ 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     booking_id = models.BigIntegerField(null=True,blank=True)
     title = models.CharField(max_length=255)
@@ -84,6 +85,9 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     payment_status=models.CharField(max_length=50,null=True,blank=True)
     payment_amount = models.CharField(null=True, blank=True)
+    category = models.CharField(max_length=20,default='booking')
+    service_type = models.CharField(max_length=20,null=True,blank=True)
+
 
 
     def __str__(self):
@@ -113,6 +117,7 @@ class Requests(models.Model):
     time_slot=models.CharField(max_length=100)
     payment_method=models.CharField(max_length=100)
     payment_amount = models.CharField(null=True,blank=True)
+    payment_status = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
@@ -123,32 +128,41 @@ class Requests(models.Model):
        
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
+        
+        if is_update and self.type and self.type.lower() == "private waste":
+            if not self.payment_status or self.payment_status.strip() == "":
+              self.payment_status = 'pending'
 
         super().save(*args, **kwargs)
 
         if is_update:
-            include_payment = self.waste_type and self.waste_type.lower() == "private waste"
+            include_payment = self.type and self.type.lower() == "private waste"
             
             existing_notification = Notification.objects.filter(
             user=self.user,
             booking_id=self.booking_id
         ).first()
-
+            
             if existing_notification:
                 existing_notification.status = self.status
                 existing_notification.comment = self.comment or ''
                 existing_notification.payment_amount = self.payment_amount if include_payment else None
-                existing_notification.payment_status = "pending" if include_payment else None
-                existing_notification.title =f"Your {self.service_type.title()} Request Has Been Approved"
+                existing_notification.payment_status = self.payment_status if include_payment else None
+                existing_notification.title =f"Your {self.service_type.title()} Request Has Been {self.status}"
+                existing_notification.category = "payment"
+                existing_notification.service_type = self.service_type
+                existing_notification.save()
             else:
                 Notification.objects.create(
                     user=self.user,
                     booking_id=self.booking_id,
-                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    title=f"Your {self.service_type.title()} Request Has Been {self.status}",
                     status=self.status,
                     comment=self.comment or '',
                     payment_amount=self.payment_amount if include_payment else None,
-                    payment_status = "pending" if include_payment else None
+                    payment_status = self.payment_status if include_payment else None,
+                    category = "payment"if include_payment else 'booking',
+                    service_type = self.service_type
                 )
 
 
@@ -194,6 +208,7 @@ class Kalyanmandap_booking(models.Model):
     additional_requests = models.TextField()
     payment_method = models.CharField(max_length=100)
     payment_amount = models.CharField(null=True,blank=True)
+    payment_status = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     
@@ -204,10 +219,14 @@ class Kalyanmandap_booking(models.Model):
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
 
+        if is_update :
+         if not self.payment_status or self.payment_status.strip() == "":
+            self.payment_status = 'pending'
+
         super().save(*args, **kwargs)
 
         if is_update:
-        
+            
             existing_notification = Notification.objects.filter(
             user=self.user,
             booking_id=self.booking_id
@@ -217,18 +236,22 @@ class Kalyanmandap_booking(models.Model):
                 existing_notification.status = self.status
                 existing_notification.comment = self.comment or ''
                 existing_notification.payment_amount = self.payment_amount or None
-                existing_notification.payment_status = "pending" or None
-                existing_notification.title =f"Your {self.service_type.title()} Has Been Completed"
+                existing_notification.payment_status = self.payment_status or None
+                existing_notification.title =f"Your {self.service_type.title()} Has Been {self.status}"
+                existing_notification.category = "payment"
+                existing_notification.service_type = self.service_type
                 existing_notification.save()
             else:
                 Notification.objects.create(
                     user=self.user,
                     booking_id=self.booking_id,
-                    title=f"Your {self.service_type.title()} Has Been Completed",
+                    title=f"Your {self.service_type.title()} Has Been {self.status}",
                     status=self.status,
                     comment=self.comment or '',
                     payment_amount=self.payment_amount,
-                    payment_status = "pending"
+                    payment_status = self.payment_status,
+                    category ="payment",
+                    service_type = self.service_type
                     
                 )
         
@@ -290,20 +313,22 @@ class Complaint(models.Model):
             if existing_notification:
                 existing_notification.status = self.status
                 existing_notification.comment = self.comment or ''
-                existing_notification.title = f"Your {self.service_type.title()} Request Has Been Approved"
+                existing_notification.title = f"Your {self.service_type.title()} Request Has Been {self.status}"
                 existing_notification.payment_status = None
                 existing_notification.payment_amount = None
+                existing_notification.service_type=self.service_type
                 existing_notification.save()
             else:
                 
                 Notification.objects.create(
                     user=self.user,
                     booking_id=self.booking_id,
-                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    title=f"Your {self.service_type.title()} Request Has Been {self.status}",
                     status=self.status,
                     comment=self.comment or '',
                     payment_status = None,
-                    payment_amount = None
+                    payment_amount = None,
+                     service_type = self.service_type
                 )
 
 class Complaint_images(models.Model):
@@ -326,6 +351,8 @@ class CesspoolRequest(models.Model):
     urgency_level = models.CharField(max_length=20,null=True,blank=True)
     preferred_datetime = models.DateTimeField(blank=True, null=True) 
     accessibility_note = models.TextField(blank=True)
+    payment_amount = models.CharField(null=True,blank=True)
+    payment_status = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -337,11 +364,13 @@ class CesspoolRequest(models.Model):
         if not self.booking_id:
             self.booking_id = BookingSequence.get_next_booking_id()
 
+        if is_update :
+         if not self.payment_status or self.payment_status.strip() == "":
+            self.payment_status = 'pending'
+
         super().save(*args, **kwargs)
 
-        # Notify only if status or comment changed
         if is_update:
-            
             existing_notification = Notification.objects.filter(
             user=self.user,
             booking_id=self.booking_id
@@ -350,20 +379,24 @@ class CesspoolRequest(models.Model):
             if existing_notification:
                 existing_notification.status = self.status
                 existing_notification.comment = self.comment or ''
-                existing_notification.title = f"Your {self.service_type.title()} Request Has Been Approved"
-                existing_notification.payment_status = None
-                existing_notification.payment_amount = None
+                existing_notification.payment_status = self.payment_status or None
+                existing_notification.payment_amount = self.payment_amount or None
+                existing_notification.title =f"Your {self.service_type.title()} Request Has Been {self.status}"
+                existing_notification.category = "payment"
+                existing_notification.service_type = self.service_type
                 existing_notification.save()
             else:
                 
                 Notification.objects.create(
                     user=self.user,
                     booking_id=self.booking_id,
-                    title=f"Your {self.service_type.title()} Request Has Been Approved",
+                    title=f"Your {self.service_type.title()} Request Has Been {self.status}",
                     status=self.status,
                     comment=self.comment or '',
-                    payment_status = None,
-                    payment_amount = None
+                    payment_amount=self.payment_amount,
+                    payment_status = self.payment_status,
+                    category ="payment",
+                    service_type = self.service_type
                 )
                 
                 
@@ -377,6 +410,7 @@ class PromotionalBanners(models.Model):
     hyperlink = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True,null=True)
     banner_image = models.ImageField(upload_to="banner_images/")
+
     
 
 

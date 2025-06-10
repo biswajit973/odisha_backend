@@ -113,7 +113,7 @@ class CesspoolRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model =  CesspoolRequest
-        fields = ['id','booking_id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','cesspool_images']
+        fields = ['id','booking_id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','payment_amount','cesspool_images']
 
 
 
@@ -121,7 +121,7 @@ class CessPoolStatusUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model =  CesspoolRequest
-        fields = ["status","comment"]   
+        fields = ["status","comment","payment_amount"]   
         
          
 
