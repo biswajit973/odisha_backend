@@ -32,9 +32,8 @@ urlpatterns = [
     path('api/admin/waste_mgmt/personal-waste-list/', views.RequestsPersonalWasteListView.as_view(), name='api/admin/waste_mgmt/personal-waste-list/'),
     path('api/user/bookings/', views.UserBookingsView.as_view(), name='api/user/bookings/'),
     path('api/user/eachbooking/', views.UserEachBookingView.as_view(), name='api/user/eachbooking/'),
-    path('api/admin/event_klm/mandaps/', views.AdminCreateKalyanmandapView.as_view(), name='api/admin/event_klm/mandaps/'),
-    path('api/event_klm/mandaps/', views.GetKalyanmandapView.as_view(), name='api//event_klm/mandaps/'), 
-    path('api/admin/event_klm/mandaps/<int:pk>/', views.AdminUpdateKalyanmandapView.as_view(), name='api/admin/event_klm/mandaps/<int:pk>/'),
+    path('api/event_klm/mandaps/', views.GetKalyanmandapView.as_view(), name='api/event_klm/mandaps/'), 
+    # path('api/admin/event_klm/mandaps/<int:pk>/', views.AdminUpdateKalyanmandapView.as_view(), name='api/admin/event_klm/mandaps/<int:pk>/'),
     path('api/event_klm/mandaps/<int:pk>/', views.GetOneKalyanmandapView.as_view(), name='api/event_klm/mandaps/<int:pk>/'),
     path('api/event_klm/book/', views.BookKalyanmandapView.as_view(), name='api/event_klm/book/'),
     # path('api/admin/event_klm/bookings/', views.AdminListAllBookingsView.as_view(), name='api/admin/event_klm/bookings/'),
@@ -76,7 +75,9 @@ urlpatterns = [
     path('api/user/notifications/', views.UserNotificationsView.as_view(), name='user-notifications'),
     path('api/user/filternotifications/', views.FilterNotifications.as_view(), name='userfilter-notifications'),
     path('api/user/notification-details/', views.NotificationDetailsView.as_view(), name='user-notification-details'),
-    path('api/update-payment/',views.Updatepaymentview.as_view(),name='update-payment')
+    path('api/user/update-payment-success/',views.UpdateSuccessPaymentView.as_view(),name='update-payment-success'),
+    path('api/user/update-payment-reject/',views.UpdateRejectedPaymentView.as_view(),name='update-payment-reject')
+
     
 
     

@@ -139,6 +139,9 @@ class UpdateAdminView(APIView):
             serializer.save()
             return Response({"message":"Details Updated Successfully"}, status=status.HTTP_200_OK)
         return Response(serializer.errors,status=status.HTTP_404_NOT_FOUND)
+    
+
+    
         
         
         
@@ -323,7 +326,170 @@ class UpdateBannerView(APIView):
             return Response({"message":"Banner updated successfully"},status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+    
+class AdminCreateKalyanmandapView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = KalyanmandapSerializer
+    
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not request.FILES.getlist('mandap_images'):
+            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        kalyanmandap_instance = serializer.save()
+        for image in request.FILES.getlist('mandap_images'):
+            Kalyanmandap_images.objects.create(
+                Kalyanmandap = kalyanmandap_instance,
+                image = image
+            )   
+        
+        return Response({"message": "Kalyanmandap created successfully"}, status=status.HTTP_201_CREATED)    
 
 
 
+class AllKalyanmandapView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = KalyanmandapSerializer
+
+    def get(self, request):
+        kalyanmandap = Kalyanmandap.objects.prefetch_related('kalyanmandap_images').all()
+        
+        if not kalyanmandap.exists():
+            return Response({"message": "No kalyanmandaps found."}, status=status.HTTP_200_OK)
+
+        serializer = self.serializer_class(kalyanmandap, many=True)
+        data = serializer.data
+
+        for item, instance in zip(data, kalyanmandap):
+            item['mandap_images'] = [img.image.url for img in instance.kalyanmandap_images.all()]
+
+        return Response(data, status=status.HTTP_200_OK)
+    
+
+class AdminUpdateKalyanmandapView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = KalyanmandapSerializer
+
+    def put(self, request, pk):
+        try:
+            kalyanmandap = Kalyanmandap.objects.get(id=pk)
+        except Kalyanmandap.DoesNotExist:
+            return Response({"error": "Kalyanmandap not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.FILES.getlist('mandap_images'):
+            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.serializer_class(kalyanmandap, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            kalyanmandap_instance = serializer.save()
+
+            Kalyanmandap_images.objects.filter(Kalyanmandap=kalyanmandap_instance).delete()
+            for image in request.FILES.getlist('mandap_images'):
+                Kalyanmandap_images.objects.create(
+                    Kalyanmandap=kalyanmandap_instance,
+                    image=image
+                )
+
+            return Response({"message": "Kalyanmandap details updated successfully"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
+    
+    
+
+class AdminDeleteMandapView(APIView):
+    permission_classes=[IsAdminUser]
+    def delete(self,request,pk):
+        try:
+            mandap = Kalyanmandap.objects.get(id=pk)
+            mandap.delete()
+            return Response({"message":"mandap deleted successfully"}, status=status.HTTP_200_OK)
+        except Kalyanmandap.DoesNotExist:
+            return Response({"message":"mandap not found"}, status=status.HTTP_404_NOT_FOUND)     
+
+
+class AdminUpdateKalyanmandapStatusView(APIView):    
+    
+    
+    permission_classes = [IsAdminUser]
+    serializer_class = KalyanmandapSerializer
+
+    def put(self, request, pk):
+        try:
+            kalyanmandap = Kalyanmandap.objects.get(id=pk)
+        except Kalyanmandap.DoesNotExist:
+            return Response({"error": "Kalyanmandap not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.serializer_class(kalyanmandap, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Mandap Status updated successfully"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
+    
+ 
+class AdminNotificationsView(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def get(self,request):
+        
+        try:
+           notifications =  AdminNotifications.objects.all()
+           serializer = AdminNotificationsSerializer(notifications,many=True)
+           return Response({"message": "Notifications Fetched Successfully","count":notifications.count(),'notifications':serializer.data},status=status.HTTP_200_OK) 
+        except AdminNotifications.DoesNotExist:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
+    
+class AdminNotificationsView(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def get(self,request):
+        
+        try:
+           notifications =  AdminNotifications.objects.all()
+           serializer = AdminNotificationsSerializer(notifications,many=True)
+           return Response({"message": "Notifications Fetched Successfully","count":notifications.count(),'notifications':serializer.data},status=status.HTTP_200_OK) 
+        except AdminNotifications.DoesNotExist:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
+
+class FilterAdminNotificationsView(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def get(self,request,department):
+        
+        try:
+           notifications =  AdminNotifications.objects.filter(service_type=department)
+           serializer = AdminNotificationsSerializer(notifications,many=True)
+           return Response({"message": "Notifications Fetched Successfully","count":notifications.count(),'notifications':serializer.data},status=status.HTTP_200_OK) 
+        except AdminNotifications.DoesNotExist:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)                  
+           
+        
+
+
+
+class ClearAdminNotifications(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request):
+        user = request.user
+
+        if user.is_superuser:
+            AdminNotifications.objects.all().delete()
+            return Response({"message": "All notifications cleared."}, status=204)
+
+        department = getattr(user, 'department', None)
+        if not department:
+            return Response({"error": "Department not found for user."}, status=400)
+
+        AdminNotifications.objects.filter(service_type__iexact=department).delete()
+        return Response({"message": f"Notifications cleared for department: {department}"}, status=204)
+        
     

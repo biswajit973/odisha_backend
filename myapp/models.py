@@ -88,8 +88,6 @@ class Notification(models.Model):
     category = models.CharField(max_length=20,default='booking')
     service_type = models.CharField(max_length=20,null=True,blank=True)
 
-
-
     def __str__(self):
         return f"{self.title} for booking {self.booking_id}"
     
@@ -106,22 +104,23 @@ class Requests(models.Model):
     description = models.TextField()
     waste_type = models.CharField(max_length=200,null=True)
     waste_type_other = models.TextField()
-    location=models.CharField(max_length=100)
-    address=models.TextField(blank=True,null=True)
-    date=models.DateField(blank=True,null=True)
-    house_number=models.CharField(max_length=100,blank=True,null=True)
-    floor=models.CharField(max_length=100,blank=True,null=True) 
-    block=models.CharField(max_length=100,blank=True,null=True)
-    landmark=models.CharField(max_length=100,blank=True,null=True)
-    contact_number=models.CharField(max_length=100)
-    time_slot=models.CharField(max_length=100)
-    payment_method=models.CharField(max_length=100)
+    location = models.CharField(max_length=100)
+    address = models.TextField(blank=True,null=True)
+    date = models.DateField(blank=True,null=True)
+    house_number = models.CharField(max_length=100,blank=True,null=True)
+    floor = models.CharField(max_length=100,blank=True,null=True) 
+    block = models.CharField(max_length=100,blank=True,null=True)
+    landmark = models.CharField(max_length=100,blank=True,null=True)
+    contact_number = models.CharField(max_length=100)
+    time_slot = models.CharField(max_length=100)
+    payment_method = models.CharField(max_length=100)
     payment_amount = models.CharField(null=True,blank=True)
     payment_status = models.CharField(null=True,blank=True)
+    reason_for_rejection = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
-    created_at=models.DateTimeField(auto_now_add=True)
-    updated_at=models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def save(self, *args, **kwargs):
         is_update = self.pk is not None
@@ -130,8 +129,8 @@ class Requests(models.Model):
             self.booking_id = BookingSequence.get_next_booking_id()
         
         if is_update and self.type and self.type.lower() == "private waste":
-            if not self.payment_status or self.payment_status.strip() == "":
-              self.payment_status = 'pending'
+            if self.status == 'approved' and (not self.payment_status or self.payment_status.strip() == ""):
+               self.payment_status = 'pending'
 
         super().save(*args, **kwargs)
 
@@ -149,7 +148,7 @@ class Requests(models.Model):
                 existing_notification.payment_amount = self.payment_amount if include_payment else None
                 existing_notification.payment_status = self.payment_status if include_payment else None
                 existing_notification.title =f"Your {self.service_type.title()} Request Has Been {self.status}"
-                existing_notification.category = "payment"
+                existing_notification.category = "payment" if include_payment else 'booking', 
                 existing_notification.service_type = self.service_type
                 existing_notification.save()
             else:
@@ -161,11 +160,9 @@ class Requests(models.Model):
                     comment=self.comment or '',
                     payment_amount=self.payment_amount if include_payment else None,
                     payment_status = self.payment_status if include_payment else None,
-                    category = "payment"if include_payment else 'booking',
+                    category = "payment" if include_payment else 'booking',
                     service_type = self.service_type
                 )
-
-
 
 
 class Request_images(models.Model):
@@ -186,7 +183,7 @@ class Kalyanmandap(models.Model):
     mandap_contact_number = models.CharField(max_length=100,blank=True,null=True)    
     mandap_capacity = models.IntegerField(blank=True,null=True)
     mandap_amenities = models.TextField(blank=True,null=True)
-    mandap_minimum_booking_unit = models.CharField (max_length=100,blank=True,null=True)
+    mandap_minimum_booking_unit = models.CharField(max_length=100,blank=True,null=True)
     mandap_price_range = models.CharField(max_length=100,blank=True,null=True)
     mandap_price_note = models.TextField(blank=True,null=True)
     active = models.BooleanField(default=True)
@@ -209,6 +206,7 @@ class Kalyanmandap_booking(models.Model):
     payment_method = models.CharField(max_length=100)
     payment_amount = models.CharField(null=True,blank=True)
     payment_status = models.CharField(null=True,blank=True)
+    reason_for_rejection = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(null=True,blank=True)
     
@@ -220,7 +218,7 @@ class Kalyanmandap_booking(models.Model):
             self.booking_id = BookingSequence.get_next_booking_id()
 
         if is_update :
-         if not self.payment_status or self.payment_status.strip() == "":
+         if self.status == 'approved' and (not self.payment_status or self.payment_status.strip() == ""):
             self.payment_status = 'pending'
 
         super().save(*args, **kwargs)
@@ -255,12 +253,8 @@ class Kalyanmandap_booking(models.Model):
                     
                 )
         
-        
- 
-   
-    
 
-    
+   
 class ComplaintCategory(models.Model):
     name = models.CharField(max_length=255)
     active_status = models.BooleanField(default=True)
@@ -353,6 +347,7 @@ class CesspoolRequest(models.Model):
     accessibility_note = models.TextField(blank=True)
     payment_amount = models.CharField(null=True,blank=True)
     payment_status = models.CharField(null=True,blank=True)
+    reason_for_rejection = models.CharField(null=True,blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -365,7 +360,7 @@ class CesspoolRequest(models.Model):
             self.booking_id = BookingSequence.get_next_booking_id()
 
         if is_update :
-         if not self.payment_status or self.payment_status.strip() == "":
+         if self.status == 'approved' and (not self.payment_status or self.payment_status.strip() == ""):
             self.payment_status = 'pending'
 
         super().save(*args, **kwargs)
@@ -410,6 +405,14 @@ class PromotionalBanners(models.Model):
     hyperlink = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True,null=True)
     banner_image = models.ImageField(upload_to="banner_images/")
+    
+ 
+class AdminNotifications(models.Model):
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='admin_notifications')
+    booking_id = models.BigIntegerField(null=True,blank=True)
+    title = models.CharField(max_length=255)
+    service_type = models.CharField(max_length=20,null=True,blank=True) 
 
     
 

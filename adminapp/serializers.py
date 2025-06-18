@@ -113,7 +113,7 @@ class CesspoolRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model =  CesspoolRequest
-        fields = ['id','booking_id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','payment_amount','cesspool_images']
+        fields = ['id','booking_id','name','service_type', 'contact_number','location','address','description','waste_tank_type','capacity','urgency_level','preferred_datetime','accessibility_note','status','comment','payment_amount','payment_status','reason_for_rejection','cesspool_images']
 
 
 
@@ -131,8 +131,7 @@ class Kalyanmandap_imagesSerializer(serializers.ModelSerializer):
         fields = ['image']
         
 class KalyanmandapSerializer(serializers.ModelSerializer):
-    active = serializers.BooleanField(required=False, default=True)
-    
+    active = serializers.BooleanField()
     class Meta:
         model = Kalyanmandap
         fields = '__all__'  
@@ -152,7 +151,7 @@ class AdminKalyanmandapBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Kalyanmandap_booking
         fields = ['id','booking_id','user_name','service_type','kalyanmandap','mandap_name','occasion','number_of_people','start_datetime','end_datetime','duration',
-                  'additional_requests','payment_method','status','comment','payment_amount'
+                  'additional_requests','payment_method','status','comment','payment_amount','payment_status','reason_for_rejection'
                   ,'mandap_description','mandap_address','mandap_contact_number','mandap_capacity','mandap_amenities',
                   'mandap_minimum_booking_unit','mandap_price_range','mandap_price_note','kalyanmandap_images']   
              
@@ -177,4 +176,13 @@ class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = PromotionalBanners
         fields=['id','hyperlink','description','banner_image']  
+        
+class AdminNotificationsSerializer(serializers.ModelSerializer) :
+    
+    class Meta:
+        model = AdminNotifications
+        fields='__all__'
+        
+    
+           
 

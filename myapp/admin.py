@@ -19,6 +19,8 @@ admin.site.register(PromotionalBanners)
 admin.site.register(CesspoolRequest)
 admin.site.register(CesspoolRequest_images)
 admin.site.register(Notification)
+admin.site.register(AdminNotifications)
+
 
 
 

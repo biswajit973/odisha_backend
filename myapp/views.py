@@ -458,6 +458,12 @@ class CreateRequestView(APIView):
                 request = request_instance,
                 image = image
             )
+        AdminNotifications.objects.create(
+            user = request_instance.user,
+            booking_id =request_instance.booking_id,
+            title =f"A new {request_instance.service_type} request by {request_instance.user.first_name}",
+            service_type  = 'waste management'
+        )    
         
         return Response({"message": "Request created successfully","booking_id":request_instance.booking_id}, status=status.HTTP_201_CREATED)
         
@@ -582,26 +588,26 @@ class RequestsPersonalWasteListView(APIView):
 
 
     
-class AdminCreateKalyanmandapView(APIView):
-    permission_classes = [IsAdminUser]
-    serializer_class = KalyanmandapSerializer
+# class AdminCreateKalyanmandapView(APIView):
+#     permission_classes = [IsAdminUser]
+#     serializer_class = KalyanmandapSerializer
     
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request):
+#         serializer = self.serializer_class(data=request.data)
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        if not request.FILES.getlist('mandap_images'):
-            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+#         if not request.FILES.getlist('mandap_images'):
+#             return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        kalyanmandap_instance = serializer.save()
-        for image in request.FILES.getlist('mandap_images'):
-            Kalyanmandap_images.objects.create(
-                Kalyanmandap = kalyanmandap_instance,
-                image = image
-            )   
+#         kalyanmandap_instance = serializer.save()
+#         for image in request.FILES.getlist('mandap_images'):
+#             Kalyanmandap_images.objects.create(
+#                 Kalyanmandap = kalyanmandap_instance,
+#                 image = image
+#             )   
         
-        return Response({"message": "Kalyanmandap created successfully"}, status=status.HTTP_201_CREATED)
+#         return Response({"message": "Kalyanmandap created successfully"}, status=status.HTTP_201_CREATED)
     
 class GetKalyanmandapView(APIView):
     permission_classes = [IsAuthenticated]
@@ -620,34 +626,34 @@ class GetKalyanmandapView(APIView):
         return Response(data, status=status.HTTP_200_OK)
     
     
-class AdminUpdateKalyanmandapView(APIView):
-    permission_classes = [IsAdminUser]
-    serializer_class = KalyanmandapSerializer
+# class AdminUpdateKalyanmandapView(APIView):
+#     permission_classes = [IsAdminUser]
+#     serializer_class = KalyanmandapSerializer
 
-    def put(self, request, pk):
-        try:
-            kalyanmandap = Kalyanmandap.objects.get(id=pk)
-        except Kalyanmandap.DoesNotExist:
-            return Response({"error": "Kalyanmandap not found."}, status=status.HTTP_404_NOT_FOUND)
+#     def put(self, request, pk):
+#         try:
+#             kalyanmandap = Kalyanmandap.objects.get(id=pk)
+#         except Kalyanmandap.DoesNotExist:
+#             return Response({"error": "Kalyanmandap not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if not request.FILES.getlist('mandap_images'):
-            return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+#         if not request.FILES.getlist('mandap_images'):
+#             return Response({"error": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.serializer_class(kalyanmandap, data=request.data, partial=True)
+#         serializer = self.serializer_class(kalyanmandap, data=request.data, partial=True)
 
-        if serializer.is_valid():
-            kalyanmandap_instance = serializer.save()
+#         if serializer.is_valid():
+#             kalyanmandap_instance = serializer.save()
 
-            Kalyanmandap_images.objects.filter(Kalyanmandap=kalyanmandap_instance).delete()
-            for image in request.FILES.getlist('mandap_images'):
-                Kalyanmandap_images.objects.create(
-                    Kalyanmandap=kalyanmandap_instance,
-                    image=image
-                )
+#             Kalyanmandap_images.objects.filter(Kalyanmandap=kalyanmandap_instance).delete()
+#             for image in request.FILES.getlist('mandap_images'):
+#                 Kalyanmandap_images.objects.create(
+#                     Kalyanmandap=kalyanmandap_instance,
+#                     image=image
+#                 )
 
-            return Response({"message": "Kalyanmandap details updated successfully"}, status=status.HTTP_200_OK)
+#             return Response({"message": "Kalyanmandap details updated successfully"}, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetOneKalyanmandapView(APIView):
@@ -676,7 +682,15 @@ class BookKalyanmandapView(APIView):
     def post(self, request):
         serializer = KalyanmandapBookingSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)  
+            mandap_booking_instance = serializer.save(user=request.user)  
+        
+            AdminNotifications.objects.create(
+                user = mandap_booking_instance.user,
+                booking_id =mandap_booking_instance.booking_id,
+                title =f"A new {mandap_booking_instance.service_type}  by {mandap_booking_instance.user.first_name}",
+                service_type  = 'mandap booking'
+            )       
+            
             return Response({
                 "message": "Kalyanmandap booking submitted successfully.",
                 
@@ -712,25 +726,25 @@ class UserEachKalyanmandapBookingView(APIView):
     
     
     
-class AdminListAllBookingsView(APIView):
-    permission_classes = [IsAdminUser]  
+# class AdminListAllBookingsView(APIView):
+#     permission_classes = [IsAdminUser]  
 
-    def get(self, request):
-        bookings = Kalyanmandap_booking.objects.all().order_by('-start_datetime')
-        serializer = AdminKalyanmandapBookingSerializer(bookings, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)    
+#     def get(self, request):
+#         bookings = Kalyanmandap_booking.objects.all().order_by('-start_datetime')
+#         serializer = AdminKalyanmandapBookingSerializer(bookings, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)    
     
    
-class AdminEachMandapBookingView(APIView):
-    permission_classes = [IsAdminUser]  
+# class AdminEachMandapBookingView(APIView):
+#     permission_classes = [IsAdminUser]  
 
-    def get(self, request,pk):
-        try:
-            bookings = Kalyanmandap_booking.objects.get(id=pk)
-        except Kalyanmandap_booking.DoesNotExist:
-            return Response({"message": "No record found"}, status=status.HTTP_200_OK)
-        serializer = AdminKalyanmandapBookingSerializer(bookings)
-        return Response(serializer.data, status=status.HTTP_200_OK) 
+#     def get(self, request,pk):
+#         try:
+#             bookings = Kalyanmandap_booking.objects.get(id=pk)
+#         except Kalyanmandap_booking.DoesNotExist:
+#             return Response({"message": "No record found"}, status=status.HTTP_200_OK)
+#         serializer = AdminKalyanmandapBookingSerializer(bookings)
+#         return Response(serializer.data, status=status.HTTP_200_OK) 
     
            
     
@@ -900,7 +914,13 @@ class CreateComplaintView(APIView):
                 Complaint_images.objects.create(
                     complaint = Complaint_instance,
                     image = img
-                )  
+                ) 
+            AdminNotifications.objects.create(
+                user = Complaint_instance.user,
+                booking_id =Complaint_instance.booking_id,
+                title =f"A new {Complaint_instance.service_type} request by {Complaint_instance.user.first_name}",
+                service_type  = 'complaints'
+            )             
             return Response({"message": "Complaint submitted successfully","booking_id":Complaint_instance.booking_id}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -989,16 +1009,23 @@ class CreateCesspoolRequestView(APIView):
         data = request.data
 
         images_data = data.pop("cesspool_images", [])
+        if not images_data:
+                return Response({"message": "At least one image is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = CesspoolRequestSerializer(data=request.data)
         if serializer.is_valid():
             cesspool_instance = serializer.save(user=request.user)
 
-            if not images_data:
-                return Response({"message": "At least one image is required"}, status=status.HTTP_400_BAD_REQUEST)
-
+           
             for img in images_data:
                 CesspoolRequest_images.objects.create(Cesspool=cesspool_instance, image=img)
+            
+            AdminNotifications.objects.create(
+                user = cesspool_instance.user,
+                booking_id =cesspool_instance.booking_id,
+                title =f"A new {cesspool_instance.service_type} request by {cesspool_instance.user.first_name}",
+                service_type  = 'cesspool'
+            )     
 
             return Response({"message": "CessPool request raised Successfully","booking_id":cesspool_instance.booking_id}, status=status.HTTP_200_OK)
 
@@ -1140,116 +1167,294 @@ class UserNotificationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)   
+        try:
+            notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+            
+            if notifications.exists():
+                serializer = NotificationSerializer(notifications, many=True)
+
+                response_data = {
+                    "status_code": status.HTTP_200_OK,
+                    "status": True,
+                    "message": "Notifications fetched successfully.",
+                    "data": serializer.data
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                response_data = {
+                        "status_code": status.HTTP_200_OK,
+                        "status": True,
+                        "message": "No records found.",
+                        "data": []
+                    }
+                return Response(response_data, status=status.HTTP_200_OK)
+                    
+
+        except Exception:
+            response_data = {
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status": False,
+                "message": "An unexpected error occurred while fetching notifications.",
+                "data": []
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
     
 
 class FilterNotifications(APIView):
     permission_classes = [IsAuthenticated]
     
-    def get(self,request):
-        user=request.user  
-        category = request.query_params.get('category')
-        if not category :
-            return Response(
-                {"error": "Missing category type in query parameters."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        notifications = Notification.objects.filter(user=user,category=category).order_by('-created_at')
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)   
+    def get(self, request):
+        try:
+            user = request.user
+            category = request.query_params.get('category')
+
+            if not category:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": "Missing category type in query parameters.",
+                    "data": []
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            notifications = Notification.objects.filter(user=user, category=category).order_by('-created_at')
+            
+            if notifications.exists():
+                serializer = NotificationSerializer(notifications, many=True)
+                response_data = {
+                    "status_code": status.HTTP_200_OK,
+                    "status": True,
+                    "message": "Filtered notifications fetched successfully.",
+                    "data": serializer.data
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                response_data = {
+                    "status_code": status.HTTP_200_OK,
+                    "status": False,  
+                    "message": "No records found.",
+                    "data": []
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception:
+            response_data = {
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status_message": False,
+                "message": "An unexpected error occurred while filtering notifications.",
+                "data": []
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
 class NotificationDetailsView(APIView):
     permission_classes = [IsAuthenticated]
     
-    def get(self,request):
-        user=request.user  
-        booking_id = request.query_params.get('booking_id')
-        service_type = request.query_params.get('service_type')
-        
-        if not service_type or not booking_id:
-            return Response(
-                {"error": "Missing service_type or booking_id in query parameters."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        service_type = service_type.lower()
-
-        if service_type == "waste pickup":
-            booking = get_object_or_404(Requests, booking_id=booking_id, service_type=service_type,user=user)
-            serializer = RequestSerializer(booking)
-
-        elif service_type == "mandap booking":
-            booking = get_object_or_404(
-                Kalyanmandap_booking.objects.select_related('kalyanmandap'),
-                booking_id=booking_id,
-                service_type=service_type,user=user
-            )
-            serializer = KalyanmandapBookingSerializer(booking)
+    def get(self, request):
+        try:
+            user = request.user
+            booking_id = request.query_params.get('booking_id')
+            service_type = request.query_params.get('service_type')
             
-        elif service_type == "cesspool":
-            booking = get_object_or_404(CesspoolRequest, booking_id=booking_id, service_type=service_type,user=user)
-            serializer = CesspoolRequestSerializer(booking)  
-            
-        elif service_type == "complaints":
-            booking = get_object_or_404(Complaint, booking_id=booking_id, service_type=service_type,user=user)
-            serializer = ComplaintSerializer(booking)            
+            if not service_type or not booking_id:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": "Missing service_type or booking_id in query parameters.",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-        else:
-            return Response(
-                {"error": f"Invalid service_type: {service_type}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            service_type = service_type.lower()
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            if service_type == "waste pickup":
+                booking = get_object_or_404(Requests, booking_id=booking_id, service_type=service_type, user=user)
+                serializer = RequestSerializer(booking)
+
+            elif service_type == "mandap booking":
+                booking = get_object_or_404(
+                    Kalyanmandap_booking.objects.select_related('kalyanmandap'),
+                    booking_id=booking_id,
+                    service_type=service_type,
+                    user=user
+                )
+                serializer = KalyanmandapBookingSerializer(booking)
+
+            elif service_type == "cesspool":
+                booking = get_object_or_404(CesspoolRequest, booking_id=booking_id, service_type=service_type, user=user)
+                serializer = CesspoolRequestSerializer(booking)
+
+            elif service_type == "complaints":
+                booking = get_object_or_404(Complaint, booking_id=booking_id, service_type=service_type, user=user)
+                serializer = ComplaintSerializer(booking)
+
+            else:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": f"Invalid service_type: {service_type}",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            response_data = {
+                "status_code": status.HTTP_200_OK,
+                "status": True,
+                "message": "Booking details fetched successfully.",
+                "data": serializer.data
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception:
+            response_data = {
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status": False,
+                "message": "An unexpected error occurred while fetching booking details.",
+                "data": {}
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     
-class Updatepaymentview(APIView):
+class UpdateSuccessPaymentView(APIView):
     permission_classes = [IsAuthenticated]
-    def put(self,request):
-        user=request.user  
-        booking_id = request.query_params.get('booking_id')
-        service_type = request.query_params.get('service_type')
-        
-        if not service_type or not booking_id:
-            return Response(
-                {"error": "Missing service_type or booking_id in query parameters."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        service_type = service_type.lower()
-
-        if service_type == "waste pickup":
-            booking = get_object_or_404(Requests, booking_id=booking_id, service_type=service_type, user=user)
-            booking.payment_status = "Completed"  
-            booking.save()
-        elif service_type == "mandap booking":
-            booking = get_object_or_404(
-                Kalyanmandap_booking.objects.select_related('kalyanmandap'),
-                booking_id=booking_id, service_type=service_type, user=user
-            )
-            booking.payment_status = "Completed"  
-            booking.save()
+    
+    def put(self, request):
+        try:
+            user = request.user
+            booking_id = request.query_params.get('booking_id')
+            service_type = request.query_params.get('service_type')
             
-        elif service_type == "cesspool":
-            booking = get_object_or_404(CesspoolRequest, booking_id=booking_id, service_type=service_type, user=user)
-            booking.payment_status = "Completed"  
-            booking.save()
-        
-        else:
-            return Response(
-                {"error": f"Invalid service_type: {service_type}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            if not service_type or not booking_id:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": "Missing service_type or booking_id in query parameters.",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "Payment status updated successfully."}, status=status.HTTP_200_OK)
+            service_type = service_type.lower()
+
+            if service_type == "waste pickup":
+                booking = get_object_or_404(Requests, booking_id=booking_id, service_type=service_type, user=user)
+                booking.payment_status = "Completed"
+                booking.save()
+
+            elif service_type == "mandap booking":
+                booking = get_object_or_404(
+                    Kalyanmandap_booking.objects.select_related('kalyanmandap'),
+                    booking_id=booking_id, service_type=service_type, user=user
+                )
+                booking.payment_status = "Completed"
+                booking.save()
+
+            elif service_type == "cesspool":
+                booking = get_object_or_404(CesspoolRequest, booking_id=booking_id, service_type=service_type, user=user)
+                booking.payment_status = "Completed"
+                booking.save()
+
+            else:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": f"Invalid booking_id or service_type: {service_type}",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            response_data = {
+                "status_code": status.HTTP_200_OK,
+                "status": True,
+                "message": "Payment status updated successfully.",
+                "data": {}
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception:
+            response_data = {
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status": False,
+                "message": "An unexpected error occurred while updating payment status.",
+                "data": {}
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class UpdateRejectedPaymentView(APIView):
+    
+    permission_classes = [IsAuthenticated]
+    
+    def put(self,request):
+        try:
+            user = request.user
+            booking_id = request.data.get('booking_id')
+            service_type = request.data.get('service_type')
+            reason_for_rejection = request.data.get('reason_for_rejection')
+            if not service_type or not booking_id:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": "Missing service_type or booking_id in query parameters.",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            service_type = service_type.lower()
+            print('service_type',service_type)
+            print('booking_id',booking_id)
+            print('reason_for_rejection',reason_for_rejection)
+            print('user',user)
+            
+            if service_type == "waste pickup":
+                booking = get_object_or_404(Requests, booking_id=booking_id, service_type=service_type, user=user)
+                print('booking',booking)
+                booking.payment_status = "Rejected"
+                booking.reason_for_rejection = reason_for_rejection
+                booking.save()
+
+            elif service_type == "mandap booking":
+                booking = get_object_or_404(
+                    Kalyanmandap_booking.objects.select_related('kalyanmandap'),
+                    booking_id=booking_id, service_type=service_type, user=user
+                )
+                booking.payment_status = "Rejected"
+                booking.reason_for_rejection = reason_for_rejection
+                booking.save()
+
+            elif service_type == "cesspool":
+                booking = get_object_or_404(CesspoolRequest, booking_id=booking_id, service_type=service_type, user=user)
+                booking.payment_status = "Rejected"
+                booking.reason_for_rejection = reason_for_rejection
+                booking.save()
+
+            else:
+                response_data = {
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "status": False,
+                    "message": f"Invalid booking_id or service_type: {service_type}",
+                    "data": {}
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            response_data = {
+                "status_code": status.HTTP_200_OK,
+                "status": True,
+                "message": "Payment status updated successfully.",
+                "data": {}
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception:
+            response_data = {
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status": False,
+                "message": "An unexpected error occurred while updating payment status.",
+                "data": {}
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
-    
-    
+            
     
 
         

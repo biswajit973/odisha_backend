@@ -32,6 +32,21 @@ urlpatterns = [
     path('deletebanner/<int:pk>/',views.DeleteBannerView.as_view(), name='delete-banner'),
     path('updatebanner/<int:pk>/',views.UpdateBannerView.as_view(), name='update-banner'),
 
+    path('event_klm/mandaps/', views.AdminCreateKalyanmandapView.as_view(), name='api/admin/event_klm/mandaps/'),
+    
+    path('event_klm/viewmandaps/', views.AllKalyanmandapView.as_view(), name='api/admin/event_klm/viewmandaps/'),
+    path('event_klm/mandaps/<int:pk>/', views.AdminUpdateKalyanmandapView.as_view(), name='event_klm/mandaps/<int:pk>/'),
+
+    path('event_klm/delete-mandap/<int:pk>/', views.AdminDeleteMandapView.as_view(), name='event_klm/delete-mandap/<int:pk>/        '),
+
+    path('event_klm/mandap-status/<int:pk>/', views.AdminUpdateKalyanmandapStatusView.as_view(), name='event_klm/mandaps/<int:pk>/'),
+
+        path('admin-notifications/', views.AdminNotificationsView.as_view(), name='admin-notifications/'),
+        path('filter-admin-notifications/<str:department>/', views.FilterAdminNotificationsView.as_view(), name='filter-admin-notifications/'),
+
+          path('clear-admin-notifications/', views.ClearAdminNotifications.as_view(), name='clear-admin-notifications'),
+
+
 
 ]
 
